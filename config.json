@@ -1,0 +1,7 @@
+{
+  "model": "gemma4:e4b",
+  "max_static_tokens": 500,
+  "max_memory_tokens": 500,
+  "max_output_tokens": 500,
+  "thinking": "True"
+}

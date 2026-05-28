@@ -1,0 +1,4 @@
+rich
+ollama
+tiktoken
+terminal-animation

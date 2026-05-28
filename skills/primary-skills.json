@@ -1,0 +1,19 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "memorise",
+      "description": "Stores a fact or piece of information you want to remember during conversations and or action output you want to remember for further action taking.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "fact": {
+            "type": "string",
+            "description": "The fact or information you want to remember."
+          }
+        },
+        "required": ["fact"]
+      }
+    }
+  }
+]
