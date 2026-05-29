@@ -75,7 +75,9 @@ def call_evy(prompt):
 
     ## Convert prompt to tokens and count before sending to model
     # Create one sting combination
-    combined_static = consolidate_context(system_context, skills_context, primary_schemas)
+    combined_static = consolidate_context(
+        system_context, skills_context, primary_schemas
+    )
 
     # Conversion of combined_static to tokens
     token_count = count_tokens(combined_static)
@@ -134,9 +136,9 @@ def call_evy(prompt):
                             }
                         )
                     else:
-                        fn = primary_functions.get(tc.function.name) or loaded_functions.get(
+                        fn = primary_functions.get(
                             tc.function.name
-                        )
+                        ) or loaded_functions.get(tc.function.name)
                         if fn:
                             try:
                                 result = fn(**tc.function.arguments)

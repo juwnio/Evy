@@ -12,5 +12,29 @@
         "required": []
       }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_notion_page_content",
+      "description": "Retrieves the content of a Notion page as readable text. Supports filtering by content type: all blocks, headings only, or todos only.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "description": "The ID of the Notion page to retrieve content from."
+          },
+          "filter": {
+            "type": "string",
+            "enum": ["all", "headings", "todos"],
+            "description": "Content filter. 'all' returns the full page, 'headings' returns h1-h3 headings only, 'todos' returns all to-do items only. Defaults to 'all'."
+          }
+        },
+        "required": ["page_id"]
+      }
+    }
   }
 ]

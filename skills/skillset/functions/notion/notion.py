@@ -93,6 +93,7 @@ def list_notion_pages(token: Optional[str] = None) -> List[Dict[str, Any]]:
 
             all_pages.append(
                 {
+                    "id": page_id,
                     "title": title,
                     "is_public": is_public,
                 }
@@ -104,3 +105,80 @@ def list_notion_pages(token: Optional[str] = None) -> List[Dict[str, Any]]:
         start_cursor = next_cursor
 
     return all_pages
+
+
+HEADING_TYPES = {"heading_1", "heading_2", "heading_3"}
+HEADING_PREFIX = {"heading_1": "#", "heading_2": "##", "heading_3": "###"}
+
+BLOCK_RENDERERS = {
+    "heading_1": lambda b: f"# {_plain(b['heading_1'])}",
+    "heading_2": lambda b: f"## {_plain(b['heading_2'])}",
+    "heading_3": lambda b: f"### {_plain(b['heading_3'])}",
+    "paragraph": lambda b: _plain(b["paragraph"]),
+    "bulleted_list_item": lambda b: f"- {_plain(b['bulleted_list_item'])}",
+    "numbered_list_item": lambda b: f"1. {_plain(b['numbered_list_item'])}",
+    "to_do": lambda b: f"{'☑' if b['to_do']['checked'] else '☐'} {_plain(b['to_do'])}",
+    "toggle": lambda b: f"> {_plain(b['toggle'])}",
+    "quote": lambda b: f"| {_plain(b['quote'])}",
+    "code": lambda b: f"`{_plain(b['code'])}`",
+    "divider": lambda b: "---",
+    "callout": lambda b: f"[{_plain(b['callout'])}]",
+}
+
+
+def _plain(block_content: dict) -> str:
+    """Extract plain text from a block's rich_text list."""
+    return "".join(
+        segment.get("plain_text", "") for segment in block_content.get("rich_text", [])
+    )
+
+
+def _fetch_all_blocks(client, page_id: str) -> list:
+    """Fetch all blocks for a page, handling pagination."""
+    blocks = []
+    cursor = None
+    while True:
+        kwargs = {"block_id": page_id, "page_size": 100}
+        if cursor:
+            kwargs["start_cursor"] = cursor
+        response = client.blocks.children.list(**kwargs)
+        blocks.extend(response.get("results", []))
+        if not response.get("has_more"):
+            break
+        cursor = response.get("next_cursor")
+    return blocks
+
+
+def get_notion_page_content(
+    page_id: str,
+    filter: str = "all",
+    token: Optional[str] = None,
+) -> str:
+    if token is None:
+        token = load_notion_token()
+
+    client = Client(auth=token)
+    blocks = _fetch_all_blocks(client, page_id)
+
+    lines = []
+    for block in blocks:
+        block_type = block.get("type")
+
+        if filter == "headings" and block_type not in HEADING_TYPES:
+            continue
+        if filter == "todos" and block_type != "to_do":
+            continue
+
+        renderer = BLOCK_RENDERERS.get(block_type)
+        if renderer:
+            try:
+                line = renderer(block)
+                if line:
+                    lines.append(line)
+            except (KeyError, TypeError):
+                continue
+
+    if not lines:
+        return f"No content found for filter '{filter}'."
+
+    return "\n".join(lines)

@@ -1,7 +1,7 @@
 {
   "model": "gemma4:e4b",
-  "max_static_tokens": 900,
-  "max_memory_tokens": 500,
-  "max_output_tokens": 500,
-  "thinking": "False"
+  "max_static_tokens": 50000,
+  "max_memory_tokens": 50000,
+  "max_output_tokens": 4096,
+  "thinking": false
 }
