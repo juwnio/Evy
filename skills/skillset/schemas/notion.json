@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "list_notion_pages",
+      "description": "Lists all Notion pages with their titles and public visibility status.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  }
+]

@@ -43,3 +43,21 @@ def search_skills(tag: str, schemas_dir: str = "skills/skillset/schemas") -> lis
                     }
                 )
     return results
+
+
+def load_skills(names: list[str]) -> list[dict]:
+    schemas_dir = Path("skills/skillset/schemas")
+    loaded = []
+    for filepath in schemas_dir.glob("*.json"):
+        try:
+            with open(filepath) as f:
+                tools = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            continue
+        if not isinstance(tools, list):
+            continue
+        for tool in tools:
+            func = tool.get("function", {})
+            if func.get("name") in names and len(loaded) < 5:
+                loaded.append(tool)
+    return loaded

@@ -1,4 +1,6 @@
 rich
+dotenv
 ollama
 tiktoken
+notion_client
 terminal-animation

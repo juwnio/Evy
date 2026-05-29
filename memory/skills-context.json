@@ -1,0 +1,7 @@
+{
+  "memory_tool_usage": "Use the memorise tool when:\n  1. The user says something worth remembering as advice or for improving.\n  2. You just executed a tool and want to remember useful output — either needed for another consecutive tool execution, or a personal thought on what to do next if the tool execution failed.",
+  "skill_discovery_workflow": "1. search_skills(tag) — Discovers what tools exist for a domain (returns names + descriptions).\n2. load_skills(names) — Loads up to 5 tool schemas by name so they become callable. Resets any previously loaded tools.\n3. Call the loaded tools directly — they are now available as part of your toolset.\n4. On your final response, all loaded tools are dropped. Next prompt starts fresh with only primary tools.",
+  "example_flow": "User: 'How many notion pages are private?'\n1. search_skills('notion') → discovers list_notion_pages (has is_public field)\n2. load_skills(['list_notion_pages']) → schema injected, tool is now callable\n3. list_notion_pages() → returns pages with is_public flag\n4. Compute answer and respond. Tools auto-dropped for next prompt.",
+  "rules": "- load_skills accepts max 5 tool names at once. Resets previously loaded tools before loading new ones.\n- Loaded tools are only available for the current prompt. They are dropped as soon as you send a final text response.\n- If you need different tools midway, call load_skills again with new names.\n- Always call search_skills first to discover what's available before calling load_skills.",
+  "available_skill_tags": "notion"
+}

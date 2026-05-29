@@ -32,5 +32,25 @@
         "required": ["tag"]
       }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "load_skills",
+      "description": "Loads full tool schemas by name so they become callable. Pass up to 5 tool names at once. Resets previously loaded tools.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tool names to load (max 5)."
+          }
+        },
+        "required": ["names"]
+      }
+    }
   }
 ]

@@ -18,6 +18,7 @@ from utilities.states import acting, memorising, show_state, thinking_animation
 
 SKILLS_DIR = Path("skills")
 BRAIN_PATH = Path("memory/brain.json")
+ACTIONS_LOG_PATH = Path("memory/system/actions-log.json")
 
 console = Console()
 
@@ -43,7 +44,19 @@ def load_tools():
     return schemas, functions
 
 
+def _log_tool_call(entry: dict) -> None:
+    with open(ACTIONS_LOG_PATH, "r", encoding="utf-8") as f:
+        log = json.load(f)
+    log.append(entry)
+    with open(ACTIONS_LOG_PATH, "w", encoding="utf-8") as f:
+        json.dump(log, f, indent=2)
+
+
 def call_evy(prompt):
+    # Clear actions log for this prompt
+    with open(ACTIONS_LOG_PATH, "w", encoding="utf-8") as f:
+        json.dump([], f)
+
     config = load_config()
     model = config["model"]
     system_context = load_system_context()
@@ -56,11 +69,13 @@ def call_evy(prompt):
         # Memory is too large, consolidate before sending to model
         memory = consolidate(memory)
 
-    tool_schemas, functions = load_tools()
+    primary_schemas, primary_functions = load_tools()
+    loaded_schemas = []
+    loaded_functions = {}
 
     ## Convert prompt to tokens and count before sending to model
     # Create one sting combination
-    combined_static = consolidate_context(system_context, skills_context, tool_schemas)
+    combined_static = consolidate_context(system_context, skills_context, primary_schemas)
 
     # Conversion of combined_static to tokens
     token_count = count_tokens(combined_static)
@@ -84,7 +99,7 @@ def call_evy(prompt):
         response = ollama.chat(
             model=model,
             messages=messages,
-            tools=tool_schemas,
+            tools=primary_schemas + loaded_schemas,
             think=config["thinking"],
             options={"num_predict": config["max_output_tokens"]},
         )
@@ -95,23 +110,76 @@ def call_evy(prompt):
             for tc in response.message.tool_calls:
                 frames = memorising if tc.function.name == "memorise" else acting
                 with show_state(frames, color="blue", speed=0.1):
-                    fn = functions.get(tc.function.name)
-                    if fn:
-                        try:
-                            result = fn(**tc.function.arguments)
-                            _log_action(
-                                f"Executed tool: {tc.function.name}, ran successfully"
-                            )
-                        except Exception as e:
-                            result = str(e)
-                            _log_action(
-                                f"Executed tool: {tc.function.name}, failed: {e}"
-                            )
-                    else:
-                        result = f"Unknown tool: {tc.function.name}"
-                        _log_action(
-                            f"Executed tool: {tc.function.name}, failed: unknown tool"
+                    if tc.function.name == "load_skills":
+                        loaded_schemas.clear()
+                        loaded_functions.clear()
+                        new_schemas = primary_functions["load_skills"](
+                            **tc.function.arguments
                         )
+                        for s in new_schemas:
+                            mod = importlib.import_module(s["function"]["module"])
+                            loaded_functions[s["function"]["name"]] = getattr(
+                                mod, s["function"]["name"]
+                            )
+                        loaded_schemas.extend(new_schemas)
+                        result = f"Loaded {len(new_schemas)} tool(s): {[s['function']['name'] for s in new_schemas]}"
+                        _log_action(result)
+                        _log_tool_call(
+                            {
+                                "tool_name": tc.function.name,
+                                "arguments": tc.function.arguments,
+                                "result": result,
+                                "status": "success",
+                                "timestamp": datetime.now().isoformat(),
+                            }
+                        )
+                    else:
+                        fn = primary_functions.get(tc.function.name) or loaded_functions.get(
+                            tc.function.name
+                        )
+                        if fn:
+                            try:
+                                result = fn(**tc.function.arguments)
+                                _log_action(
+                                    f"Executed tool: {tc.function.name}, ran successfully"
+                                )
+                                _log_tool_call(
+                                    {
+                                        "tool_name": tc.function.name,
+                                        "arguments": tc.function.arguments,
+                                        "result": result,
+                                        "status": "success",
+                                        "timestamp": datetime.now().isoformat(),
+                                    }
+                                )
+                            except Exception as e:
+                                result = str(e)
+                                _log_action(
+                                    f"Executed tool: {tc.function.name}, failed: {e}"
+                                )
+                                _log_tool_call(
+                                    {
+                                        "tool_name": tc.function.name,
+                                        "arguments": tc.function.arguments,
+                                        "result": str(e),
+                                        "status": "error",
+                                        "timestamp": datetime.now().isoformat(),
+                                    }
+                                )
+                        else:
+                            result = f"Unknown tool: {tc.function.name}"
+                            _log_action(
+                                f"Executed tool: {tc.function.name}, failed: unknown tool"
+                            )
+                            _log_tool_call(
+                                {
+                                    "tool_name": tc.function.name,
+                                    "arguments": tc.function.arguments,
+                                    "result": result,
+                                    "status": "unknown",
+                                    "timestamp": datetime.now().isoformat(),
+                                }
+                            )
                 messages.append(
                     {
                         "role": "tool",

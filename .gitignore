@@ -1,7 +1,6 @@
+.env
 .venv/
 brain.json
 chores.txt
+actions-log.json
 brain.json.broken
-skills-context.json
-system-context.json
-consolidation-context.json
