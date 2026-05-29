@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from pathlib import Path
 
 BRAIN_PATH = "memory/brain.json"
 
@@ -18,3 +19,27 @@ def memorise(fact: str) -> str:
         json.dump(memory, f, indent=2)
 
     return f"Memorised: {fact}"
+
+
+def search_skills(tag: str, schemas_dir: str = "skills/skillset/schemas") -> list[dict]:
+    """Search all JSON files in schemas_dir and return {name, description}
+    for every tool whose `function.tag` matches the given tag."""
+    results = []
+    for filepath in Path(schemas_dir).glob("*.json"):
+        try:
+            with open(filepath) as f:
+                tools = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            continue
+        if not isinstance(tools, list):
+            continue
+        for tool in tools:
+            func = tool.get("function", {})
+            if func.get("tag") == tag:
+                results.append(
+                    {
+                        "name": func["name"],
+                        "description": func.get("description", ""),
+                    }
+                )
+    return results

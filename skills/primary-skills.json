@@ -15,5 +15,22 @@
         "required": ["fact"]
       }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "search_skills",
+      "description": "Searches all available skill schemas for tools matching a given tag and returns their names and descriptions.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "description": "The tag to search for (e.g., 'notion', 'memory', 'github')."
+          }
+        },
+        "required": ["tag"]
+      }
+    }
   }
 ]
