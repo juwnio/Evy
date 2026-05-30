@@ -1,5 +1,5 @@
 {
-  "model": "gemma4:e4b",
+  "model": "qwen3.5:4b-mlx",
   "max_static_tokens": 50000,
   "max_memory_tokens": 50000,
   "max_output_tokens": 4096,
