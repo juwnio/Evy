@@ -1,5 +1,7 @@
 {
-  "memory_tool_usage": "Use the memorise tool when:\n  1. The user says something worth remembering as advice or for improving.\n  2. You just executed a tool and want to remember useful output — either needed for another consecutive tool execution, or a personal thought on what to do next if the tool execution failed.",
-  "tool_result_persistence": "Every tool you call automatically saves its full result to brain.json. On the next prompt, that result is loaded into Memory so you can reference it — no need to memorise tool outputs manually.",
-  "available_skill_tags": "notion:\n  list_notion_pages — Lists all Notion pages with id, title, is_public\n  get_notion_page_content — Retrieves a Notion page's content as readable text (with optional filter: all, headings, todos)"
+  "memory_tool_usage": "Use memorise when: (1) the user shares something worth retaining long-term, (2) you need to carry a fact forward between consecutive tool calls.",
+  "tool_result_persistence": "Tool results are auto-saved to brain.json and loaded into Memory on the next prompt — never memorise raw tool outputs manually.",
+  "tool_workflow": "Always search_skills first using a tag relevant to the user's request, review what comes back, then load_skills with the specific tool names you need. Never call load_skills without searching first — searching is mandatory even if you think you know the tool name.",
+  "skill_discovery": "Use the tag names in available_skills to infer which is relevant based on the user's request. Tags are enough context — do not expect descriptions here. Pick the closest matching tag and search.",
+  "available_skills": ["notion"]
 }
