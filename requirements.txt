@@ -1,6 +1,18 @@
+# Connection to local LLM
+ollama
+
+# Character to token conversion
+tiktoken
+
+# Controlling Notion
+notion_client
+
+# Utulities
 rich
 dotenv
-ollama
-tiktoken
-notion_client
 terminal-animation
+
+## Browser use
+playwright
+
+# Then run 'playwright install chromium' to install the browser.
