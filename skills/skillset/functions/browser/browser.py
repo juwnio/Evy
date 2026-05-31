@@ -250,3 +250,18 @@ def browser_select(by: str, value: str, option_label: str = None, option_value: 
             return f"Selected option '{option_value}' via '{by}': '{value}'"
     except Exception as e:
         return f"Failed to select option via '{by}': '{value}' — {e}"
+
+
+def browser_wait_for(by: str = "selector", value: str = "", timeout: int = 10000) -> str:
+    """Wait for an element or text to appear on the page. Use 'selector' for CSS selectors or 'text' for visible text."""
+    page = _get_page()
+    try:
+        if by == "selector":
+            page.wait_for_selector(value, timeout=timeout)
+        elif by == "text":
+            page.get_by_text(value, exact=True).wait_for(timeout=timeout)
+        else:
+            return f"Unknown wait strategy: '{by}' — use 'selector' or 'text'."
+        return f"Waited for '{by}': '{value}'"
+    except Exception as e:
+        return f"Timed out waiting for '{by}': '{value}' — {e}"

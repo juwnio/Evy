@@ -219,5 +219,33 @@
         "required": ["by", "value"]
       }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_wait_for",
+      "description": "Waits for a CSS selector or visible text to appear on the page before proceeding. Use this after navigation or scrolling to ensure content has loaded before interacting with it.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "by": {
+            "type": "string",
+            "enum": ["selector", "text"],
+            "description": "Strategy: 'selector' waits for a CSS selector to appear in the DOM, 'text' waits for visible text to appear."
+          },
+          "value": {
+            "type": "string",
+            "description": "The CSS selector or visible text to wait for."
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Maximum wait time in milliseconds. Defaults to 10000 (10 seconds)."
+          }
+        },
+        "required": ["value"]
+      }
+    }
   }
 ]
