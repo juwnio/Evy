@@ -46,6 +46,10 @@ def search_skills(tag: str, schemas_dir: str = "skills/skillset/schemas") -> lis
 
 
 def load_skills(names: list[str]) -> list[dict]:
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    limit = config.get("max_tools_per_load", 5)
+
     schemas_dir = Path("skills/skillset/schemas")
     loaded = []
     for filepath in schemas_dir.glob("*.json"):
@@ -58,6 +62,6 @@ def load_skills(names: list[str]) -> list[dict]:
             continue
         for tool in tools:
             func = tool.get("function", {})
-            if func.get("name") in names and len(loaded) < 5:
+            if func.get("name") in names and len(loaded) < limit:
                 loaded.append(tool)
     return loaded

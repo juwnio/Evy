@@ -59,5 +59,60 @@
         "required": ["page_id"]
       }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "replace_notion_block",
+      "description": "Finds a block on a Notion page by its exact current text and replaces it with new text. Use get_notion_page_content first to read the exact text of the block you want to change.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "description": "The ID of the Notion page containing the block to update."
+          },
+          "old_text": {
+            "type": "string",
+            "description": "The exact current text of the block to replace."
+          },
+          "new_text": {
+            "type": "string",
+            "description": "The new text to replace it with."
+          }
+        },
+        "required": ["page_id", "old_text", "new_text"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "write_notion_page_content",
+      "description": "Writes content to an existing Notion page. Use 'append' to add to the bottom of the page, or 'replace' to wipe the page and rewrite it entirely.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "description": "The ID of the Notion page to write to. Use list_notion_pages to find valid IDs."
+          },
+          "content": {
+            "type": "string",
+            "description": "Plain-text content to write. Each non-empty line becomes a paragraph block."
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["append", "replace"],
+            "description": "'append' adds content to the bottom of the page. 'replace' clears the page first then writes the new content. Defaults to 'append'."
+          }
+        },
+        "required": ["page_id", "content"]
+      }
+    }
   }
 ]

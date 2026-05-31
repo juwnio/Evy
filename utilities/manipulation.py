@@ -18,11 +18,17 @@ def load_system_context():
     return "\n".join(_fmt(k, v) for k, v in system_context.items())
 
 
-# Load skills context from skills-context.json
+# Load skills context from skills-context.json, injecting values from config
 def load_skills_context():
     with open("memory/skills-context.json", "r") as f:
-        skills_context = json.load(f)
+        raw = f.read()
 
+    with open("config.json", "r") as f:
+        config = json.load(f)
+
+    raw = raw.replace("{max_tools_per_load}", str(config.get("max_tools_per_load", 5)))
+
+    skills_context = json.loads(raw)
     return "\n".join(_fmt(k, v) for k, v in skills_context.items())
 
 

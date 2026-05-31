@@ -193,6 +193,96 @@ def create_notion_page(
     return f"Created page '{title}' (id: {page_id}, url: {url})"
 
 
+TEXT_BLOCK_TYPES = {
+    "heading_1",
+    "heading_2",
+    "heading_3",
+    "paragraph",
+    "bulleted_list_item",
+    "numbered_list_item",
+    "to_do",
+    "toggle",
+    "quote",
+    "code",
+    "callout",
+}
+
+
+def replace_notion_block(
+    page_id: str,
+    old_text: str,
+    new_text: str,
+    token: Optional[str] = None,
+) -> str:
+    """Find a block on a Notion page by its exact text and replace it with new text."""
+    if token is None:
+        token = load_notion_token()
+
+    client = Client(auth=token)
+    blocks = _fetch_all_blocks(client, page_id)
+
+    matched = []
+    for block in blocks:
+        block_type = block.get("type")
+        if block_type not in TEXT_BLOCK_TYPES:
+            continue
+        if _plain(block.get(block_type, {})) == old_text:
+            matched.append((block.get("id"), block_type, block))
+
+    if not matched:
+        return f"No block found matching: '{old_text}'"
+
+    for block_id, block_type, block in matched:
+        rich_text = [{"type": "text", "text": {"content": new_text}}]
+        if block_type == "to_do":
+            checked = block.get("to_do", {}).get("checked", False)
+            update_body = {"rich_text": rich_text, "checked": checked}
+        else:
+            update_body = {"rich_text": rich_text}
+        client.blocks.update(block_id=block_id, **{block_type: update_body})
+
+    return f"Replaced {len(matched)} block(s): '{old_text}' → '{new_text}'"
+
+
+def write_notion_page_content(
+    page_id: str,
+    content: str,
+    mode: str = "append",
+    token: Optional[str] = None,
+) -> str:
+    """Append or replace the content of a Notion page."""
+    if token is None:
+        token = load_notion_token()
+
+    client = Client(auth=token)
+
+    new_blocks: List[Dict[str, Any]] = []
+    for line in content.splitlines():
+        line = line.strip()
+        if line:
+            new_blocks.append(
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {
+                        "rich_text": [{"type": "text", "text": {"content": line}}]
+                    },
+                }
+            )
+
+    if mode == "replace":
+        existing = _fetch_all_blocks(client, page_id)
+        for block in existing:
+            block_id = block.get("id")
+            if block_id:
+                client.blocks.delete(block_id=block_id)
+
+    client.blocks.children.append(block_id=page_id, children=new_blocks)
+
+    action = "Replaced" if mode == "replace" else "Appended"
+    return f"{action} content on page {page_id} ({len(new_blocks)} block(s) written)"
+
+
 def get_notion_page_content(
     page_id: str,
     filter: str = "all",

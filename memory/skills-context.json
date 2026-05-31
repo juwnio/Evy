@@ -1,7 +1,8 @@
 {
   "memory_tool_usage": "Use memorise when: (1) the user shares something worth retaining long-term, (2) you need to carry a fact forward between consecutive tool calls.",
   "tool_result_persistence": "Tool results are auto-saved to brain.json and loaded into Memory on the next prompt — never memorise raw tool outputs manually.",
-  "tool_workflow": "Always search_skills first using a tag relevant to the user's request, review what comes back, then load_skills with the specific tool names you need. Never call load_skills without searching first — searching is mandatory even if you think you know the tool name.",
+  "tool_workflow": "Always search_skills first using a tag relevant to the user's request, review what comes back, then load_skills with ALL the tool names you need for the task in a single call (up to {max_tools_per_load}). Never call load_skills without searching first. Never call load_skills more than once per task — each call resets previously loaded tools, so batch everything you need together.",
   "skill_discovery": "Use the tag names in available_skills to infer which is relevant based on the user's request. Tags are enough context — do not expect descriptions here. Pick the closest matching tag and search.",
+  "id_discipline": "Never fabricate or guess IDs. If a tool requires an ID (page_id, block_id, etc.), always retrieve it first using the appropriate lookup tool (e.g. list_notion_pages). If you cannot get a real ID, stop and tell the user.",
   "available_skills": ["notion"]
 }
