@@ -1,0 +1,33 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "send_email",
+      "description": "Sends an email from Evy's own email account. Use this for sending independent emails — no permission needed. If the user asks you to send on their behalf, ask for their permission first.",
+      "tag": "send_email",
+      "module": "skills.skillset.functions.email.send",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Recipient email address."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line."
+          },
+          "body": {
+            "type": "string",
+            "description": "Email body text (plain text)."
+          },
+          "cc": {
+            "type": "string",
+            "description": "Optional CC recipient email address."
+          }
+        },
+        "required": ["to", "subject", "body"]
+      }
+    }
+  }
+]
