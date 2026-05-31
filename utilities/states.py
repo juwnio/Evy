@@ -26,16 +26,16 @@ def _patched_animate(self):
 animation.Wait._animate = _patched_animate
 
 thinking = [
-    "⠋⠸⠦ Thinking",
-    "⠙⠼⠧ Thinking",
-    "⠹⠴⠇ Thinking",
-    "⠸⠦⠏ Thinking",
-    "⠼⠧⠋ Thinking",
-    "⠴⠇⠙ Thinking",
-    "⠦⠏⠹ Thinking",
-    "⠧⠋⠸ Thinking",
-    "⠇⠙⠼ Thinking",
-    "⠏⠹⠴ Thinking",
+    "⠋⠸⠦ Ruminating",
+    "⠙⠼⠧ Ruminating",
+    "⠹⠴⠇ Ruminating",
+    "⠸⠦⠏ Ruminating",
+    "⠼⠧⠋ Ruminating",
+    "⠴⠇⠙ Ruminating",
+    "⠦⠏⠹ Ruminating",
+    "⠧⠋⠸ Ruminating",
+    "⠇⠙⠼ Ruminating",
+    "⠏⠹⠴ Ruminating",
 ]
 thinking_animation = animation.Wait(thinking, color="blue", speed=0.1)
 
@@ -68,16 +68,16 @@ memorising = [
 memorising_animation = animation.Wait(memorising, color="blue", speed=0.1)
 
 acting = [
-    "⠋ Acting",
-    "⠙ Acting",
-    "⠹ Acting",
-    "⠸ Acting",
-    "⠼ Acting",
-    "⠴ Acting",
-    "⠦ Acting",
-    "⠧ Acting",
-    "⠇ Acting",
-    "⠏ Acting",
+    "⠋ Working",
+    "⠙ Working",
+    "⠹ Working",
+    "⠸ Working",
+    "⠼ Working",
+    "⠴ Working",
+    "⠦ Working",
+    "⠧ Working",
+    "⠇ Working",
+    "⠏ Working",
 ]
 acting_animation = animation.Wait(acting, color="blue", speed=0.1)
 

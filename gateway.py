@@ -63,23 +63,19 @@ def call_evy(prompt):
     skills_context = load_skills_context()
     memory = load_memory(str(BRAIN_PATH), [])
 
-    ## Check if memory is eligable for consolidation
+    ## Check if memory is eligible for consolidation
     token_count = count_tokens(json.dumps(memory))
     if token_count > config["max_memory_tokens"]:
-        # Memory is too large, consolidate before sending to model
         memory = consolidate(memory)
 
     primary_schemas, primary_functions = load_tools()
     loaded_schemas = []
     loaded_functions = {}
 
-    ## Convert prompt to tokens and count before sending to model
-    # Create one sting combination
     combined_static = consolidate_context(
         system_context, skills_context, primary_schemas
     )
 
-    # Conversion of combined_static to tokens
     token_count = count_tokens(combined_static)
     max_static_tokens = config["max_static_tokens"]
 
@@ -96,23 +92,71 @@ def call_evy(prompt):
         {"role": "system", "content": skills_context},
     ]
 
+    # Temporary thinking: force thinking on for one turn after an error,
+    # but only if config thinking is off — restores after that turn.
+    force_thinking = False
+
     while True:
+        effective_thinking = config["thinking"] or force_thinking
+
         thinking_animation.start()
         response = ollama.chat(
             model=model,
             messages=messages,
             tools=primary_schemas + loaded_schemas,
-            think=config["thinking"],
+            think=effective_thinking,
             options={"num_predict": config["max_output_tokens"]},
         )
         thinking_animation.stop()
+
+        # Reset after use — forced thinking only lasts one turn
+        force_thinking = False
+
         messages.append(response.message)
 
         if response.message.tool_calls:
             for tc in response.message.tool_calls:
                 frames = memorising if tc.function.name == "memorise" else acting
+
+                # Print before spinner
+                if tc.function.name == "load_skills":
+                    console.print(
+                        f"\n[#eb9b34]⊶[/#eb9b34] [dim]Loading {tc.function.arguments.get('names', '?')}...[/dim]\n"
+                    )
+                elif tc.function.name == "search_skills":
+                    console.print(
+                        f"\n[#eb9b34]⌕[/#eb9b34] [dim]Searching for a '{tc.function.arguments['tag']}' skill[/dim]\n"
+                    )
+                else:
+                    console.print(
+                        f"\n[#eb9b34]⧉[/#eb9b34] [dim]Executing tool: {tc.function.name}[/dim]\n"
+                    )
+
                 with show_state(frames, color="blue", speed=0.1):
-                    if tc.function.name == "load_skills":
+                    # ── Defensive guard ──────────────────────────────────────
+                    # Model called load_skills with 'tag' instead of 'names'
+                    if (
+                        tc.function.name == "load_skills"
+                        and "tag" in tc.function.arguments
+                    ):
+                        result = (
+                            "Defensive guard: load_skills only accepts 'names', not 'tag'. "
+                            "Call search_skills with the tag first, then pass the returned "
+                            "tool names to load_skills."
+                        )
+                        force_thinking = not config["thinking"]
+                        _log_tool_call(
+                            {
+                                "tool_name": tc.function.name,
+                                "arguments": tc.function.arguments,
+                                "result": result,
+                                "status": "defensive_guard",
+                                "timestamp": datetime.now().isoformat(),
+                            }
+                        )
+
+                    # ── load_skills (correct args) ───────────────────────────
+                    elif tc.function.name == "load_skills":
                         loaded_schemas.clear()
                         loaded_functions.clear()
                         new_schemas = primary_functions["load_skills"](
@@ -135,6 +179,8 @@ def call_evy(prompt):
                                 "timestamp": datetime.now().isoformat(),
                             }
                         )
+
+                    # ── All other tools ──────────────────────────────────────
                     else:
                         fn = primary_functions.get(
                             tc.function.name
@@ -155,7 +201,11 @@ def call_evy(prompt):
                                     }
                                 )
                             except Exception as e:
-                                result = str(e)
+                                # ── Exception guard ─────────────────────────
+                                # Error goes back to model — it decides whether
+                                # to self-correct or surface it to the user
+                                result = f"Tool error ({tc.function.name}): {e}"
+                                force_thinking = not config["thinking"]
                                 _log_action(
                                     f"Executed tool: {tc.function.name}, failed: {e}"
                                 )
@@ -170,6 +220,7 @@ def call_evy(prompt):
                                 )
                         else:
                             result = f"Unknown tool: {tc.function.name}"
+                            force_thinking = not config["thinking"]
                             _log_action(
                                 f"Executed tool: {tc.function.name}, failed: unknown tool"
                             )
@@ -182,6 +233,7 @@ def call_evy(prompt):
                                     "timestamp": datetime.now().isoformat(),
                                 }
                             )
+
                 messages.append(
                     {
                         "role": "tool",

@@ -3,5 +3,5 @@
   "max_static_tokens": 50000,
   "max_memory_tokens": 50000,
   "max_output_tokens": 4096,
-  "thinking": true
+  "thinking": false
 }
