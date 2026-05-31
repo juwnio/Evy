@@ -15,6 +15,14 @@ def set_thinking(value: bool):
         json.dump(config, f, indent=2)
 
 
+def set_browser_headless(value: bool):
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    config["browser_headless"] = value
+    with open("config.json", "w") as f:
+        json.dump(config, f, indent=2)
+
+
 def get_thinking_state() -> bool:
     with open("config.json", "r") as f:
         config = json.load(f)
@@ -29,6 +37,8 @@ while True:
         console.print("[dim]    /think   - Enable thinking ✱[/dim]")
         console.print("[dim]    /nothink - Disable thinking ✳[/dim]")
         console.print("[dim]    /state   - Show thinking state[/dim]")
+        console.print("[dim]    /headless - Set browser headless mode ⅏[/dim]")
+        console.print("[dim]    /head    - Set browser head mode ࿂[/dim]")
         continue
     if prompt == "/think":
         set_thinking(True)
@@ -48,6 +58,18 @@ while True:
             console.print(
                 "\n[#eb9b34]✳[/#eb9b34] [dim]Evy is not thinking about it.[/dim]"
             )
+        continue
+    if prompt == "/headless":
+        set_browser_headless(True)
+        console.print(
+            "\n[#eb9b34]⅏[/#eb9b34] [dim]Evy will use browser in background[/dim]"
+        )
+        continue
+    if prompt == "/head":
+        set_browser_headless(False)
+        console.print(
+            "\n[#eb9b34]࿂[/#eb9b34] [dim]You can now see Evy run browser in action[/dim]"
+        )
         continue
     print()
     if prompt == "/bye":

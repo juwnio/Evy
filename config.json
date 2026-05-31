@@ -4,5 +4,6 @@
   "max_memory_tokens": 50000,
   "max_output_tokens": 4096,
   "max_tools_per_load": 8,
+  "browser_headless": false,
   "thinking": false
 }
