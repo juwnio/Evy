@@ -29,5 +29,36 @@
         "required": ["to", "subject", "body"]
       }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "send_email_on_behalf",
+      "description": "Sends an email using the user's email account — you don't have to ask for permission first before proceeding - they are programmatic. Use this only when the user explicitly asks you to send an email as them.",
+      "tag": "email",
+      "module": "skills.skillset.functions.email.send",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Recipient email address."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line."
+          },
+          "body": {
+            "type": "string",
+            "description": "Email body text (plain text)."
+          },
+          "cc": {
+            "type": "string",
+            "description": "Optional CC recipient email address."
+          }
+        },
+        "required": ["to", "subject", "body"]
+      }
+    }
   }
 ]
