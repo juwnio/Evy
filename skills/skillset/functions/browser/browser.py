@@ -99,3 +99,45 @@ def browser_close() -> str:
     """Close the browser and reset the session. The browser will relaunch on next use."""
     _close_browser()
     return "Browser closed."
+
+
+# ── Reading tools ─────────────────────────────────────────────────────────────
+
+
+def browser_get_text(selector: str = "body") -> str:
+    """Extract visible text from the current page, scoped to an optional CSS selector."""
+    page = _get_page()
+    escaped = selector.replace('"', '\\"')
+    text = page.evaluate(
+        f"""() => {{
+            const el = document.querySelector("{escaped}");
+            return el ? el.innerText.trim() : null;
+        }}"""
+    )
+    if not text:
+        return f"No text found for selector '{selector}'."
+    return text
+
+
+def browser_get_links() -> str:
+    """Return all links on the current page with anchor text and URLs."""
+    page = _get_page()
+    links = page.evaluate("""() =>
+        Array.from(document.querySelectorAll('a[href]')).map(a => ({
+            text: (a.textContent.trim() || '(no text)').slice(0, 100),
+            href: a.href
+        }))
+    """)
+    if not links:
+        return "No links found on this page."
+    return "\n".join(f"{l['text']} \u2192 {l['href']}" for l in links)
+
+
+# ── Interaction tools ──────────────────────────────────────────────────────────
+
+
+def browser_scroll(amount: int = 500) -> str:
+    """Scroll the page down by the given number of pixels."""
+    page = _get_page()
+    page.evaluate(f"window.scrollBy(0, {amount})")
+    return f"Scrolled down {amount}px."

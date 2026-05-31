@@ -66,6 +66,7 @@ def call_evy(prompt):
     ## Check if memory is eligible for consolidation
     token_count = count_tokens(json.dumps(memory))
     if token_count > config["max_memory_tokens"]:
+        console.print("[#eb9b34]⌘[/#eb9b34] [dim]Consolidating memory...[/dim]")
         memory = consolidate(memory)
 
     primary_schemas, primary_functions = load_tools()
