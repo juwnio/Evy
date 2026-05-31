@@ -74,14 +74,12 @@ def list_notion_pages(token: Optional[str] = None) -> List[Dict[str, Any]]:
 
             page_id_raw = item.get("id")
             if page_id_raw is None or not isinstance(page_id_raw, str):
-                # Skip items without a valid page_id
                 continue
 
             page_id = page_id_raw
 
             title = get_page_title_from_search(item)
 
-            # Fetch full page to check public_url
             page_data = client.pages.retrieve(page_id=page_id)
             if not isinstance(page_data, dict):
                 raise RuntimeError(
@@ -147,6 +145,52 @@ def _fetch_all_blocks(client, page_id: str) -> list:
             break
         cursor = response.get("next_cursor")
     return blocks
+
+
+def create_notion_page(
+    title: str,
+    content: Optional[str] = None,
+    token: Optional[str] = None,
+) -> str:
+    """Create a new Notion page under the configured default parent, with optional text content."""
+    if token is None:
+        token = load_notion_token()
+
+    parent_id = os.getenv("notion-default-page-id")
+    if not parent_id:
+        raise RuntimeError(
+            "No default parent page configured. Add 'notion-default-page-id=<page_id>' to your .env file."
+        )
+
+    client = Client(auth=token)
+
+    children: List[Dict[str, Any]] = []
+    if content:
+        for line in content.splitlines():
+            line = line.strip()
+            if line:
+                children.append(
+                    {
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {
+                            "rich_text": [{"type": "text", "text": {"content": line}}]
+                        },
+                    }
+                )
+
+    page = client.pages.create(
+        parent={"page_id": parent_id},
+        properties={"title": {"title": [{"type": "text", "text": {"content": title}}]}},
+        children=children,
+    )
+
+    if not isinstance(page, dict):
+        raise RuntimeError(f"Unexpected create response type: {type(page)}")
+
+    page_id = page.get("id", "unknown")
+    url = page.get("url", "")
+    return f"Created page '{title}' (id: {page_id}, url: {url})"
 
 
 def get_notion_page_content(

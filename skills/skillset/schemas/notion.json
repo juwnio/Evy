@@ -16,6 +16,29 @@
   {
     "type": "function",
     "function": {
+      "name": "create_notion_page",
+      "description": "Creates a new top-level Notion page in the workspace. Optionally seeds it with plain-text content split into paragraph blocks.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "The title of the new page."
+          },
+          "content": {
+            "type": "string",
+            "description": "Optional plain-text content to seed the page with. Each non-empty line becomes a paragraph block."
+          }
+        },
+        "required": ["title"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "get_notion_page_content",
       "description": "Retrieves the content of a Notion page as readable text. Supports filtering by content type: all blocks, headings only, or todos only.",
       "tag": "notion",
