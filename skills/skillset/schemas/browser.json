@@ -1,0 +1,63 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_navigate",
+      "description": "Opens a URL in the browser. Returns the page title and final URL after any redirects. Use this to start browsing or jump to a new page.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The URL to navigate to. https:// is added automatically if no scheme is provided."
+          }
+        },
+        "required": ["url"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_go_back",
+      "description": "Navigates back to the previous page in the browser history. Returns the page title and URL landed on.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_reload",
+      "description": "Reloads the current page. Useful after form submissions or when a page needs to be refreshed.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_close",
+      "description": "Closes the browser and resets the session. Use this when browser tasks are fully complete to free up resources. The browser will relaunch automatically on next use.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  }
+]
