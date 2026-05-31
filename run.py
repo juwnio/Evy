@@ -39,11 +39,15 @@ while True:
         console.print("\n[#eb9b34]✳[/#eb9b34] [dim]Set thinking mode to false[/dim]")
         continue
     if prompt == "/state":
-        console.print(
-            "\n[#eb9b34]✱[/#eb9b34] [dim]Evy is really thinking about it![/dim]"
-        ) if get_thinking_state() else (
-            "\n[#eb9b34]✳[/#eb9b34] [dim]Evy is not thinking about it.[/dim]"
-        )
+        state = get_thinking_state()
+        if state == "true":
+            console.print(
+                "\n[#eb9b34]✱[/#eb9b34] [dim]Evy is really thinking about it![/dim]"
+            )
+        else:
+            console.print(
+                "\n[#eb9b34]✳[/#eb9b34] [dim]Evy is not thinking about it.[/dim]"
+            )
         continue
     print()
     if prompt == "/bye":
