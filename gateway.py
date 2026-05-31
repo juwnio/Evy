@@ -1,5 +1,8 @@
 import importlib
 import json
+import sys
+import termios
+import tty
 from datetime import datetime
 from pathlib import Path
 
@@ -50,6 +53,62 @@ def _log_tool_call(entry: dict) -> None:
     log.append(entry)
     with open(ACTIONS_LOG_PATH, "w", encoding="utf-8") as f:
         json.dump(log, f, indent=2)
+
+
+def _arrow_confirm(prompt_text: str) -> bool:
+    idx = 0
+    options = ["Yes", "No"]
+
+    def _getch() -> str:
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            return sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+    def _render():
+        parts = []
+        for i, opt in enumerate(options):
+            if i == idx:
+                parts.append(f"[{opt}]")
+            else:
+                parts.append(f" {opt} ")
+        # \r returns to line start; \033[K clears to end of line before rewriting
+        sys.stdout.write(f"\r\033[K{prompt_text}  {' '.join(parts)} ")
+        sys.stdout.flush()
+
+    _render()
+    while True:
+        ch = _getch()
+        if ch == "\x1b":
+            _getch()
+            direction = _getch()
+            if direction == "C":
+                idx = 1
+            elif direction == "D":
+                idx = 0
+            _render()
+        elif ch in ("\r", "\n"):
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            return idx == 0
+
+
+def _check_permission(tool_name: str) -> bool:
+    try:
+        with open("permissions-check.json") as f:
+            rules = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return True
+
+    check = rules.get(tool_name)
+    if check is None:
+        return True
+    if not check:
+        return False
+    return _arrow_confirm(f"Allow Evy to execute '{tool_name}'?")
 
 
 def call_evy(prompt):
@@ -118,6 +177,31 @@ def call_evy(prompt):
         if response.message.tool_calls:
             for tc in response.message.tool_calls:
                 frames = memorising if tc.function.name == "memorise" else acting
+
+                # ── Permission check ─────────────────────────────────────────
+                always_allowed = {"memorise", "search_skills", "load_skills"}
+                if tc.function.name not in always_allowed and not _check_permission(
+                    tc.function.name
+                ):
+                    result = "User did not allow you to execute this tool."
+                    force_thinking = not config["thinking"]
+                    _log_tool_call(
+                        {
+                            "tool_name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                            "result": result,
+                            "status": "denied",
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_name": tc.function.name,
+                            "content": result,
+                        }
+                    )
+                    continue
 
                 # Print before spinner
                 if tc.function.name == "load_skills":

@@ -3,7 +3,7 @@
     "type": "function",
     "function": {
       "name": "send_email",
-      "description": "Sends an email from Evy's own email account. Use this for sending independent emails — no permission needed. If the user asks you to send on their behalf, ask for their permission first.",
+      "description": "Sends an email from Evy's own email account. Use this for sending independent emails.",
       "tag": "email",
       "module": "skills.skillset.functions.email.send",
       "parameters": {
@@ -34,7 +34,7 @@
     "type": "function",
     "function": {
       "name": "send_email_on_behalf",
-      "description": "Sends an email using the user's email account — you don't have to ask for permission first before proceeding - they are programmatic. Use this only when the user explicitly asks you to send an email as them.",
+      "description": "Sends an email using your email account. Permission is handled by the system — user approval is required before this tool runs.",
       "tag": "email",
       "module": "skills.skillset.functions.email.send",
       "parameters": {
