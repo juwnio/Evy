@@ -1,13 +1,33 @@
 import json
 import os
+import textwrap
 
 
-def _fmt(key: str, value) -> str:
+def _fmt(key: str, value, width: int = 80) -> str:
     """Format a key-value pair, indenting nested dicts/lists."""
-    if isinstance(value, (dict, list)):
-        body = json.dumps(value, indent=2).replace("\n", "\n  ")
-        return f"{key}:\n  {body}"
-    return f"{key}: {value}"
+    if isinstance(value, dict):
+        body = json.dumps(value, indent=2).replace("\n", "\n    ")
+        return f"{key}:\n    {body}"
+    if isinstance(value, list):
+        # String-only arrays: format as indented paragraphs
+        if all(isinstance(v, str) for v in value):
+            lines = []
+            for p in value:
+                wrapped = textwrap.fill(p, width=width)
+                for line in wrapped.split("\n"):
+                    lines.append("    " + line)
+            return f"{key}:\n" + "\n".join(lines)
+        # Mixed/non-string lists: JSON pretty-print
+        body = json.dumps(value, indent=2).replace("\n", "\n    ")
+        return f"{key}:\n    {body}"
+    # String value: split on \n for backward compat
+    paragraphs = value.split("\n")
+    lines = []
+    for p in paragraphs:
+        filled = textwrap.fill(p.strip(), width=width)
+        for line in filled.split("\n"):
+            lines.append("    " + line)
+    return f"{key}:\n" + "\n".join(lines)
 
 
 # Load system context from system-context.json
