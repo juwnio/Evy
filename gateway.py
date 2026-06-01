@@ -159,15 +159,41 @@ def call_evy(prompt):
     while True:
         effective_thinking = config["thinking"] or force_thinking
 
-        thinking_animation.start()
-        response = ollama.chat(
-            model=model,
-            messages=messages,
-            tools=primary_schemas + loaded_schemas,
-            think=effective_thinking,
-            options={"num_predict": config["max_output_tokens"]},
-        )
-        thinking_animation.stop()
+        if config.get("stream_thinking"):
+            content_fragments = []
+            thinking_fragments = []
+            response = None
+            stream = ollama.chat(
+                model=model,
+                messages=messages,
+                tools=primary_schemas + loaded_schemas,
+                think=effective_thinking,
+                stream=True,
+                options={"num_predict": config["max_output_tokens"]},
+            )
+            for chunk in stream:
+                response = chunk
+                if chunk.message.thinking:
+                    thinking_fragments.append(chunk.message.thinking)
+                    console.print(chunk.message.thinking, end="", style="dim")
+                if chunk.message.content:
+                    content_fragments.append(chunk.message.content)
+            if response is None:
+                return "No response from model"
+            if thinking_fragments:
+                console.print()
+            response.message.content = "".join(content_fragments) or None
+            response.message.thinking = "".join(thinking_fragments) or None
+        else:
+            thinking_animation.start()
+            response = ollama.chat(
+                model=model,
+                messages=messages,
+                tools=primary_schemas + loaded_schemas,
+                think=effective_thinking,
+                options={"num_predict": config["max_output_tokens"]},
+            )
+            thinking_animation.stop()
 
         # Reset after use — forced thinking only lasts one turn
         force_thinking = False
