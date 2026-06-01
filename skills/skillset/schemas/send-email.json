@@ -1,0 +1,98 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "send_email",
+      "description": "Sends an email from Evy's own email account. Use this for sending independent emails.",
+      "tag": "email",
+      "module": "skills.skillset.functions.email.send",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Recipient email address."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line."
+          },
+          "body": {
+            "type": "string",
+            "description": "Email body text (plain text)."
+          },
+          "cc": {
+            "type": "string",
+            "description": "Optional CC recipient email address."
+          }
+        },
+        "required": ["to", "subject", "body"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "send_email_on_behalf",
+      "description": "Sends an email using your email account. Permission is handled by the system — user approval is required before this tool runs.",
+      "tag": "email",
+      "module": "skills.skillset.functions.email.send",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Recipient email address."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line."
+          },
+          "body": {
+            "type": "string",
+            "description": "Email body text (plain text)."
+          },
+          "cc": {
+            "type": "string",
+            "description": "Optional CC recipient email address."
+          }
+        },
+        "required": ["to", "subject", "body"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "send_batch_email",
+      "description": "Sends the same email to multiple recipients from Evy's own email account.",
+      "tag": "email",
+      "module": "skills.skillset.functions.email.send",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of recipient email addresses."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line."
+          },
+          "body": {
+            "type": "string",
+            "description": "Email body text (plain text)."
+          },
+          "cc": {
+            "type": "string",
+            "description": "Optional CC recipient email address."
+          }
+        },
+        "required": ["to", "subject", "body"]
+      }
+    }
+  }
+]

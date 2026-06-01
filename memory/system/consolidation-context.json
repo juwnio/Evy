@@ -9,13 +9,13 @@
       "Ignore greetings, pleasantries, repetitions, and irrelevant details",
       "Create a single summary description of what was important in the exchanges",
       "The summary MUST start with 'I did' or 'I ' in first person perspective",
-      "The summary MUST be 42 characters maximum (including spaces)",
+      "The summary MUST be 30000 characters maximum (including spaces)",
       "Be concise but preserve the essential meaning",
       "Output ONLY the summary text, nothing else"
     ],
     "output_format": {
       "type": "plain_text",
-      "max_length": 42,
+      "max_length": 30000,
       "perspective": "first_person",
       "required_start": "I ",
       "description": "Single line summary string starting with 'I ', no markdown, no extra text"
@@ -56,7 +56,7 @@
       }
     ],
     "constraints": {
-      "character_limit": 42,
+      "character_limit": 30000,
       "must_start_with": "I ",
       "must_exactly_meet_limit": false,
       "can_be_shorter": true,
