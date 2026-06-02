@@ -2,11 +2,13 @@ import importlib
 import json
 import sys
 import termios
+import time
 import tty
 from datetime import datetime
 from pathlib import Path
 
 import ollama
+from ollama._types import ResponseError
 from rich.console import Console
 
 from utilities.consolidation import consolidate
@@ -22,6 +24,7 @@ from utilities.states import acting, memorising, show_state, thinking_animation
 SKILLS_DIR = Path("skills")
 BRAIN_PATH = Path("memory/brain.json")
 ACTIONS_LOG_PATH = Path("memory/system/actions-log.json")
+MAX_RETRIES = 3
 
 console = Console()
 
@@ -158,42 +161,59 @@ def call_evy(prompt):
 
     while True:
         effective_thinking = config["thinking"] or force_thinking
+        tools = [
+            {**s, "function": {k: v for k, v in s["function"].items() if k not in ("tag", "module")}}
+            for s in primary_schemas + loaded_schemas
+        ]
 
-        if config.get("stream_thinking"):
-            content_fragments = []
-            thinking_fragments = []
-            response = None
-            stream = ollama.chat(
-                model=model,
-                messages=messages,
-                tools=primary_schemas + loaded_schemas,
-                think=effective_thinking,
-                stream=True,
-                options={"num_predict": config["max_output_tokens"]},
-            )
-            for chunk in stream:
-                response = chunk
-                if chunk.message.thinking:
-                    thinking_fragments.append(chunk.message.thinking)
-                    console.print(chunk.message.thinking, end="", style="dim")
-                if chunk.message.content:
-                    content_fragments.append(chunk.message.content)
-            if response is None:
-                return "No response from model"
-            if thinking_fragments:
-                console.print()
-            response.message.content = "".join(content_fragments) or None
-            response.message.thinking = "".join(thinking_fragments) or None
-        else:
-            thinking_animation.start()
-            response = ollama.chat(
-                model=model,
-                messages=messages,
-                tools=primary_schemas + loaded_schemas,
-                think=effective_thinking,
-                options={"num_predict": config["max_output_tokens"]},
-            )
-            thinking_animation.stop()
+        for attempt in range(MAX_RETRIES):
+            try:
+                if config.get("stream_thinking"):
+                    content_fragments = []
+                    thinking_fragments = []
+                    tool_calls = None
+                    response = None
+                    stream = ollama.chat(
+                        model=model,
+                        messages=messages,
+                        tools=tools,
+                        think=effective_thinking,
+                        stream=True,
+                        options={"num_predict": config["max_output_tokens"]},
+                    )
+                    for chunk in stream:
+                        response = chunk
+                        if chunk.message.thinking:
+                            thinking_fragments.append(chunk.message.thinking)
+                            console.print(chunk.message.thinking, end="", style="dim")
+                        if chunk.message.content:
+                            content_fragments.append(chunk.message.content)
+                        if chunk.message.tool_calls:
+                            tool_calls = chunk.message.tool_calls
+                    if response is None:
+                        return "No response from model"
+                    if thinking_fragments:
+                        console.print()
+                    response.message.content = "".join(content_fragments) or None
+                    response.message.thinking = "".join(thinking_fragments) or None
+                    response.message.tool_calls = tool_calls
+                else:
+                    thinking_animation.start()
+                    response = ollama.chat(
+                        model=model,
+                        messages=messages,
+                        tools=tools,
+                        think=effective_thinking,
+                        options={"num_predict": config["max_output_tokens"]},
+                    )
+                    thinking_animation.stop()
+                break
+            except ResponseError as e:
+                if attempt < MAX_RETRIES - 1:
+                    console.print(f"[dim]Ollama error, retrying ({attempt + 2}/{MAX_RETRIES})...[/dim]")
+                    time.sleep(1)
+                else:
+                    raise
 
         # Reset after use — forced thinking only lasts one turn
         force_thinking = False
