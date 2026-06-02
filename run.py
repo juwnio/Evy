@@ -77,7 +77,7 @@ while True:
     if prompt == "/headless":
         set_browser_headless(True)
         console.print(
-            "\n[#eb9b34]⅏[/#eb9b34] [dim]Evy will use browser in background[/dim]"
+            "\n[#eb9b34]⅏ [/#eb9b34] [dim]Evy will use browser in background[/dim]"
         )
         continue
     if prompt == "/head":
