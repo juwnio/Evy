@@ -24,5 +24,149 @@
     "If you cannot get a real ID, stop and tell the user."
   ],
   "permissions": "Some tools are permission-gated and require user approval before execution. If the user denies, the tool will be blocked automatically — do not ask again in the same turn, just move on.",
-  "available_skills": ["notion", "browser", "email"]
+  "available_skills": ["notion", "browser", "email"],
+  "skill_workflows": {
+    "browser": {
+      "description": "Use for any task that requires visiting a URL, reading page content, interacting with page elements, or scraping data.",
+      "critical_rules": [
+        "Load ALL browser tools you could possibly need in one single load_skills call — never load a subset and never call load_skills a second time.",
+        "browser_wait_for MUST use a real CSS selector (by='selector') or a string that literally appears verbatim on the page (by='text'). Never invent a wait value like 'latest tweet' or 'results loaded' — those will always time out.",
+        "browser_get_elements must be loaded and called before browser_click, browser_fill, or browser_select.",
+        "Dynamic sites (social media, SPAs) require browser_wait_for with a CSS selector after navigation before reading or clicking."
+      ],
+      "examples": [
+        {
+          "task": "Read content from a standard webpage",
+          "steps": [
+            "search_skills(tag='browser')",
+            "load_skills(names=['browser_navigate', 'browser_get_text', 'browser_scroll', 'browser_get_elements', 'browser_wait_for'])",
+            "browser_navigate(url='https://example.com/article')",
+            "browser_wait_for(by='selector', value='article')",
+            "browser_get_text(selector='article')"
+          ]
+        },
+        {
+          "task": "Read posts from a dynamic/social media page (e.g. X, Reddit, LinkedIn)",
+          "steps": [
+            "search_skills(tag='browser')",
+            "load_skills(names=['browser_navigate', 'browser_get_text', 'browser_scroll', 'browser_get_elements', 'browser_wait_for'])",
+            "browser_navigate(url='https://x.com/username')",
+            "browser_wait_for(by='selector', value='article')",
+            "browser_get_text(selector='article')",
+            "browser_scroll(amount=1000)",
+            "browser_get_text(selector='article')"
+          ],
+          "note": "Use the CSS selector 'article' or '[data-testid=\"tweet\"]' for X. Never wait for semantic phrases like 'latest tweet'."
+        },
+        {
+          "task": "Fill and submit a form",
+          "steps": [
+            "search_skills(tag='browser')",
+            "load_skills(names=['browser_navigate', 'browser_get_elements', 'browser_fill', 'browser_click', 'browser_wait_for', 'browser_get_text'])",
+            "browser_navigate(url='https://example.com/form')",
+            "browser_get_elements(type='input')",
+            "browser_fill(by='label', value='Email', text='user@example.com')",
+            "browser_get_elements(type='button')",
+            "browser_click(by='text', value='Submit')",
+            "browser_wait_for(by='selector', value='.confirmation')",
+            "browser_get_text(selector='.confirmation')"
+          ]
+        },
+        {
+          "task": "Search a site and collect results",
+          "steps": [
+            "search_skills(tag='browser')",
+            "load_skills(names=['browser_navigate', 'browser_get_elements', 'browser_fill', 'browser_click', 'browser_wait_for', 'browser_get_text', 'browser_get_links'])",
+            "browser_navigate(url='https://example.com')",
+            "browser_get_elements(type='input')",
+            "browser_fill(by='placeholder', value='Search...', text='query')",
+            "browser_click(by='role', value='button', name='Search')",
+            "browser_wait_for(by='selector', value='.results')",
+            "browser_get_links()"
+          ]
+        }
+      ]
+    },
+    "notion": {
+      "description": "Use for reading, creating, or editing Notion pages. Always retrieve real page IDs before any read or write operation.",
+      "critical_rules": [
+        "Never guess or fabricate a page_id. Always call list_notion_pages first to retrieve valid IDs.",
+        "To edit a specific block, call get_notion_page_content first to read the exact current text, then pass that exact text to replace_notion_block.",
+        "Use write_notion_page_content with mode='append' to add content, mode='replace' to overwrite entirely."
+      ],
+      "examples": [
+        {
+          "task": "Read the content of a Notion page",
+          "steps": [
+            "search_skills(tag='notion')",
+            "load_skills(names=['list_notion_pages', 'get_notion_page_content'])",
+            "list_notion_pages()",
+            "get_notion_page_content(page_id='<id from previous result>', filter='all')"
+          ]
+        },
+        {
+          "task": "Create a new Notion page with content",
+          "steps": [
+            "search_skills(tag='notion')",
+            "load_skills(names=['create_notion_page'])",
+            "create_notion_page(title='My Page', content='First paragraph.\nSecond paragraph.')"
+          ]
+        },
+        {
+          "task": "Update a specific block on a Notion page",
+          "steps": [
+            "search_skills(tag='notion')",
+            "load_skills(names=['list_notion_pages', 'get_notion_page_content', 'replace_notion_block'])",
+            "list_notion_pages()",
+            "get_notion_page_content(page_id='<id from previous result>', filter='all')",
+            "replace_notion_block(page_id='<same id>', old_text='<exact text from previous result>', new_text='Updated text here')"
+          ]
+        },
+        {
+          "task": "Append new content to an existing Notion page",
+          "steps": [
+            "search_skills(tag='notion')",
+            "load_skills(names=['list_notion_pages', 'write_notion_page_content'])",
+            "list_notion_pages()",
+            "write_notion_page_content(page_id='<id from previous result>', content='New content to add.', mode='append')"
+          ]
+        }
+      ]
+    },
+    "email": {
+      "description": "Use for sending emails. Use send_email to send as Evy, send_email_on_behalf to send as the user (requires permission), send_batch_email for multiple recipients.",
+      "critical_rules": [
+        "send_email_on_behalf is permission-gated — the user will be prompted to approve before it runs. Do not retry if denied.",
+        "Use send_email for routine or assistant-originated emails. Use send_email_on_behalf only when the user explicitly wants the email to come from their own address.",
+        "send_batch_email sends the same body to every recipient — do not use it if each recipient needs a personalised message."
+      ],
+      "examples": [
+        {
+          "task": "Send a standard email from Evy",
+          "steps": [
+            "search_skills(tag='email')",
+            "load_skills(names=['send_email'])",
+            "send_email(to='recipient@example.com', subject='Subject here', body='Email body here.')"
+          ]
+        },
+        {
+          "task": "Send an email on behalf of the user",
+          "steps": [
+            "search_skills(tag='email')",
+            "load_skills(names=['send_email_on_behalf'])",
+            "send_email_on_behalf(to='recipient@example.com', subject='Subject here', body='Email body here.')"
+          ],
+          "note": "The user will be prompted to approve this action. If denied, stop — do not retry or fall back to send_email without telling the user."
+        },
+        {
+          "task": "Send the same email to multiple recipients",
+          "steps": [
+            "search_skills(tag='email')",
+            "load_skills(names=['send_batch_email'])",
+            "send_batch_email(to=['a@example.com', 'b@example.com', 'c@example.com'], subject='Subject here', body='Email body here.')"
+          ]
+        }
+      ]
+    }
+  }
 }
