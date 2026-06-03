@@ -70,13 +70,17 @@ while True:
         continue
     if prompt == "/state":
         config = _load_config()
-        think = "on" if config["thinking"] else "off"
-        stream = "show" if config.get("stream_thinking") else "hide"
-        model_mode = "local" if config.get("local", True) else "cloud"
-        model_name = config["model"] if config.get("local", True) else config.get("cloud-model", "")
-        console.print(
-            f"\n[#eb9b34]ⓘ[/#eb9b34] [dim]Thinking: {think}  |  Thoughts: {stream}  |  Model: {model_mode} ({model_name})[/dim]"
-        )
+        lines = ["\n[#eb9b34]ⓘ  Configuration[/#eb9b34]"]
+        for key, value in config.items():
+            if key == "ollama-api-key":
+                display = f"{value[:8]}..." if value else "(not set)"
+                lines.append(f"  [dim]{key}:[/dim] {display}")
+            elif isinstance(value, bool):
+                lines.append(f"  [dim]{key}:[/dim] {'[green]yes[/green]' if value else '[red]no[/red]'}")
+            else:
+                lines.append(f"  [dim]{key}:[/dim] {value}")
+        lines.append(f"  [dim]active_model:[/dim] {config.get('cloud-model', '?') if not config.get('local', True) else config.get('model', '?')}")
+        console.print("\n".join(lines))
         continue
     if prompt == "/headless":
         set_browser_headless(True)
