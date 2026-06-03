@@ -7,7 +7,6 @@ import tty
 from datetime import datetime
 from pathlib import Path
 
-import ollama
 from ollama._types import ResponseError
 from rich.console import Console
 
@@ -18,6 +17,7 @@ from utilities.manipulation import (
     load_memory,
     load_skills_context,
     load_system_context,
+    resolve_model_config,
 )
 from utilities.states import acting, memorising, show_state, thinking_animation
 
@@ -120,7 +120,10 @@ def call_evy(prompt):
         json.dump([], f)
 
     config = load_config()
-    model = config["model"]
+    try:
+        client, model = resolve_model_config(config)
+    except ValueError as e:
+        return str(e)
     system_context = load_system_context()
     skills_context = load_skills_context()
     memory = load_memory(str(BRAIN_PATH), [])
@@ -173,7 +176,7 @@ def call_evy(prompt):
                     thinking_fragments = []
                     tool_calls = None
                     response = None
-                    stream = ollama.chat(
+                    stream = client.chat(
                         model=model,
                         messages=messages,
                         tools=tools,
@@ -199,7 +202,7 @@ def call_evy(prompt):
                     response.message.tool_calls = tool_calls
                 else:
                     thinking_animation.start()
-                    response = ollama.chat(
+                    response = client.chat(
                         model=model,
                         messages=messages,
                         tools=tools,

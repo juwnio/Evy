@@ -2,6 +2,11 @@ import json
 import os
 import textwrap
 
+from dotenv import load_dotenv
+from ollama import Client
+
+load_dotenv()
+
 
 def _fmt(key: str, value, width: int = 80) -> str:
     """Format a key-value pair, indenting nested dicts/lists."""
@@ -80,3 +85,18 @@ def load_memory(path, default):
         with open(path, "w", encoding="utf-8") as f:
             json.dump(default, f, indent=2)
         return default
+
+
+def resolve_model_config(config):
+    if config.get("local", True):
+        return Client(), config["model"]
+    api_key = os.environ.get("ollama-api-key") or config.get("ollama-api-key", "")
+    if not api_key:
+        raise ValueError(
+            "Cloud model selected but no API key found. "
+            "Set ollama-api-key in your .env file or config.json."
+        )
+    return Client(
+        host="https://ollama.com",
+        headers={"Authorization": f"Bearer {api_key}"},
+    ), config.get("cloud-model", config["model"])

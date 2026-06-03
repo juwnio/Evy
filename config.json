@@ -1,5 +1,8 @@
 {
   "model": "qwen3.5:4b-mlx",
+  "cloud-model": "gpt-oss:120b",
+  "local": false,
+  "ollama-api-key": "",
   "max_static_tokens": 50000,
   "max_memory_tokens": 15000,
   "max_output_tokens": 4000,

@@ -1,9 +1,11 @@
 import json
 from datetime import datetime
 
-import ollama
-
-from utilities.manipulation import load_config, load_consolidation_context
+from utilities.manipulation import (
+    load_config,
+    load_consolidation_context,
+    resolve_model_config,
+)
 
 
 # Call Model for consolidation
@@ -11,12 +13,12 @@ def consolidate(memory):
 
     # Load configuration
     config = load_config()
-    model = config["model"]
+    client, model = resolve_model_config(config)
 
     # Load system context
     system_context = load_consolidation_context()
 
-    response = ollama.chat(
+    response = client.chat(
         model=model,
         messages=[
             {

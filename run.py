@@ -34,6 +34,8 @@ while True:
         console.print("[dim]    /state        - Show current mode[/dim]")
         console.print("[dim]    /headless     - Set browser headless mode ⅏[/dim]")
         console.print("[dim]    /head         - Set browser head mode ࿂[/dim]")
+        console.print("[dim]    /cloud        - Switch to cloud model[/dim]")
+        console.print("[dim]    /local        - Switch to local model[/dim]")
         continue
     if prompt == "/think/stream":
         config = _load_config()
@@ -70,14 +72,32 @@ while True:
         config = _load_config()
         think = "on" if config["thinking"] else "off"
         stream = "show" if config.get("stream_thinking") else "hide"
+        model_mode = "local" if config.get("local", True) else "cloud"
+        model_name = config["model"] if config.get("local", True) else config.get("cloud-model", "")
         console.print(
-            f"\n[#eb9b34]ⓘ[/#eb9b34] [dim]Thinking: {think}  |  Thoughts: {stream}[/dim]"
+            f"\n[#eb9b34]ⓘ[/#eb9b34] [dim]Thinking: {think}  |  Thoughts: {stream}  |  Model: {model_mode} ({model_name})[/dim]"
         )
         continue
     if prompt == "/headless":
         set_browser_headless(True)
         console.print(
             "\n[#eb9b34]⅏ [/#eb9b34] [dim]Evy will use browser in background[/dim]"
+        )
+        continue
+    if prompt == "/cloud":
+        config = _load_config()
+        config["local"] = False
+        _save_config(config)
+        console.print(
+            f"\n[#eb9b34]☁[/#eb9b34] [dim]Switched to cloud model: {config.get('cloud-model', 'unknown')}[/dim]"
+        )
+        continue
+    if prompt == "/local":
+        config = _load_config()
+        config["local"] = True
+        _save_config(config)
+        console.print(
+            f"\n[#eb9b34]⌂[/#eb9b34] [dim]Switched to local model: {config['model']}[/dim]"
         )
         continue
     if prompt == "/head":
