@@ -65,6 +65,14 @@ def load_consolidation_context():
     return "\n".join(_fmt(k, v) for k, v in consolidation_context.items())
 
 
+# Load episodic consolidation context from episodic-consolidation-context.json
+def load_episodic_consolidation_context():
+    with open("memory/system/episodic-consolidation-context.json", "r") as f:
+        consolidation_context = json.load(f)
+
+    return "\n".join(_fmt(k, v) for k, v in consolidation_context.items())
+
+
 # Load configuration from config.json
 def load_config():
     with open("config.json", "r") as f:

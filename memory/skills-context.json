@@ -2,11 +2,13 @@
   "memory_tool_usage": [
     "Use memorise when:",
     "(1) the user shares something worth retaining long-term,",
-    "(2) you need to carry a fact forward between consecutive tool calls."
+    "(2) you need to carry a fact forward between consecutive tool calls.",
+    "Memorised facts are saved to episodic-memory.json and loaded separately from conversation history."
   ],
   "tool_result_persistence": [
-    "Tool results are auto-saved to brain.json and loaded into Memory on the next prompt.",
-    "Never memorise raw tool outputs manually."
+    "Each turn is saved to brain.json as {prompt, actions: [{tool-name, arguments, results, success}], response}.",
+    "Memorised facts go to episodic-memory.json, never to brain.json.",
+    "Both are loaded into context on the next prompt."
   ],
   "tool_workflow": [
     "Always search_skills first using a tag relevant to the user's request, review what comes back, then load_skills with ALL the tool names you need for the task in a single call (up to {max_tools_per_load}).",

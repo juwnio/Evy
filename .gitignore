@@ -1,6 +1,7 @@
 .env
 .venv/
 brain.json
+episodic-memory.json
 chores.txt
 actions-log.json
 brain.json.broken

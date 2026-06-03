@@ -3,9 +3,13 @@
   "cloud-model": "gpt-oss:120b",
   "local": false,
   "ollama-api-key": "",
-  "max_static_tokens": 50000,
-  "max_memory_tokens": 15000,
-  "max_output_tokens": 4000,
+  "context_window": 128000,
+  "limits_pct": {
+    "static": 18.75,
+    "conversation": 37.5,
+    "episodic": 12.5,
+    "output": 6.25
+  },
   "max_tools_per_load": 8,
   "browser_headless": false,
   "thinking": true,

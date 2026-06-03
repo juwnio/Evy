@@ -4,18 +4,14 @@ from datetime import datetime
 from utilities.manipulation import (
     load_config,
     load_consolidation_context,
+    load_episodic_consolidation_context,
     resolve_model_config,
 )
 
 
-# Call Model for consolidation
-def consolidate(memory):
-
-    # Load configuration
+def consolidate_conversation(memory, max_output_tokens=2048):
     config = load_config()
     client, model = resolve_model_config(config)
-
-    # Load system context
     system_context = load_consolidation_context()
 
     response = client.chat(
@@ -31,21 +27,60 @@ def consolidate(memory):
             },
         ],
         think=False,
-        options={"num_predict": config.get("max_output_tokens", 512)},
+        options={"num_predict": max_output_tokens},
     )
 
-    ## Get memory and consolidate it
-    # Append response to memory-brain.json
-    brain_path = "memory/brain.json"
+    compressed = response["message"]["content"]
+    with open("memory/brain.json", "w", encoding="utf-8") as f:
+        json.dump(
+            [
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "prompt": None,
+                    "actions": [],
+                    "response": compressed,
+                    "compressed": True,
+                }
+            ],
+            f,
+            indent=2,
+        )
 
-    # Create new entry
-    new_memory = {
-        "timestamp": datetime.now().isoformat(),
-        "compressed-memory": response["message"]["content"],
-    }
+    return compressed
 
-    # Overwrite the file with only the new entry (wrapped in list for consistency)
-    with open(brain_path, "w", encoding="utf-8") as f:
-        json.dump([new_memory], f, indent=2)
 
-    return response["message"]["content"]
+def consolidate_episodic(episodic, max_output_tokens=2048):
+    config = load_config()
+    client, model = resolve_model_config(config)
+    system_context = load_episodic_consolidation_context()
+
+    response = client.chat(
+        model=model,
+        messages=[
+            {
+                "role": "system",
+                "content": system_context,
+            },
+            {
+                "role": "user",
+                "content": json.dumps(episodic, indent=2),
+            },
+        ],
+        think=False,
+        options={"num_predict": max_output_tokens},
+    )
+
+    compressed = response["message"]["content"]
+    with open("memory/episodic-memory.json", "w", encoding="utf-8") as f:
+        json.dump(
+            [
+                {
+                    "memory-saved-on": datetime.now().isoformat(),
+                    "fact": compressed,
+                }
+            ],
+            f,
+            indent=2,
+        )
+
+    return compressed

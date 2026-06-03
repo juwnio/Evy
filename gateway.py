@@ -10,7 +10,7 @@ from pathlib import Path
 from ollama._types import ResponseError
 from rich.console import Console
 
-from utilities.consolidation import consolidate
+from utilities.consolidation import consolidate_conversation, consolidate_episodic
 from utilities.conversion import consolidate_context, count_tokens
 from utilities.manipulation import (
     load_config,
@@ -23,18 +23,19 @@ from utilities.states import acting, memorising, show_state, thinking_animation
 
 SKILLS_DIR = Path("skills")
 BRAIN_PATH = Path("memory/brain.json")
+EPISODIC_PATH = Path("memory/episodic-memory.json")
 ACTIONS_LOG_PATH = Path("memory/system/actions-log.json")
 MAX_RETRIES = 3
 
 console = Console()
 
 
-def _log_action(text: str) -> None:
+def _save_brain_entry(entry: dict) -> None:
     with open(BRAIN_PATH, "r", encoding="utf-8") as f:
-        memory = json.load(f)
-    memory.append({"timestamp": datetime.now().isoformat(), "actions": text})
+        data = json.load(f)
+    data.append(entry)
     with open(BRAIN_PATH, "w", encoding="utf-8") as f:
-        json.dump(memory, f, indent=2)
+        json.dump(data, f, indent=2)
 
 
 def load_tools():
@@ -124,15 +125,38 @@ def call_evy(prompt):
         client, model = resolve_model_config(config)
     except ValueError as e:
         return str(e)
+
+    # ── Calculate token limits from percentages ──────────────────────────
+    pct = config.get("limits_pct", {})
+    total_pct = sum(pct.values())
+    if total_pct > 100:
+        console.print(
+            f"[red]Warning: configured limits_pct sum ({total_pct}) exceeds 100%. "
+            f"Reduce percentages in config.json.[/red]"
+        )
+        return
+    window = config["context_window"]
+    max_static_tokens = int(window * pct.get("static", 0) / 100)
+    max_conversation_tokens = int(window * pct.get("conversation", 0) / 100)
+    max_episodic_tokens = int(window * pct.get("episodic", 0) / 100)
+    max_output_tokens = int(window * pct.get("output", 0) / 100)
+
     system_context = load_system_context()
     skills_context = load_skills_context()
-    memory = load_memory(str(BRAIN_PATH), [])
 
-    ## Check if memory is eligible for consolidation
-    token_count = count_tokens(json.dumps(memory))
-    if token_count > config["max_memory_tokens"]:
-        console.print("[#eb9b34]⌘[/#eb9b34] [dim]Consolidating memory...[/dim]")
-        memory = consolidate(memory)
+    # Load both conversation memory and episodic (memorised) memory
+    memory = load_memory(str(BRAIN_PATH), [])
+    episodic = load_memory(str(EPISODIC_PATH), [])
+
+    # Check if conversation history needs consolidation
+    if count_tokens(json.dumps(memory)) > max_conversation_tokens:
+        console.print("[#eb9b34]⌘[/#eb9b34] [dim]Consolidating conversation history...[/dim]")
+        memory = consolidate_conversation(memory, max_output_tokens)
+
+    # Check if episodic memory needs consolidation
+    if count_tokens(json.dumps(episodic)) > max_episodic_tokens:
+        console.print("[#eb9b34]⌘[/#eb9b34] [dim]Consolidating episodic memory...[/dim]")
+        episodic = consolidate_episodic(episodic, max_output_tokens)
 
     primary_schemas, primary_functions = load_tools()
     loaded_schemas = []
@@ -143,17 +167,17 @@ def call_evy(prompt):
     )
 
     token_count = count_tokens(combined_static)
-    max_static_tokens = config["max_static_tokens"]
-
     if token_count > max_static_tokens:
         console.print(
-            f"[red]Warning: token count ({token_count}) exceeds max static tokens ({max_static_tokens})[/red]"
+            f"[red]Warning: static context ({token_count}) exceeds max static tokens ({max_static_tokens}). "
+            f"Reduce skills or increase 'static' percentage in limits_pct.[/red]"
         )
         return
 
     messages = [
         {"role": "system", "content": system_context},
-        {"role": "system", "content": f"Memory: {memory}"},
+        {"role": "system", "content": f"Conversation history: {memory}"},
+        {"role": "system", "content": f"Memorised facts: {episodic}"},
         {"role": "user", "content": prompt},
         {"role": "system", "content": skills_context},
     ]
@@ -161,6 +185,9 @@ def call_evy(prompt):
     # Temporary thinking: force thinking on for one turn after an error,
     # but only if config thinking is off — restores after that turn.
     force_thinking = False
+
+    # Track tool calls executed during this turn
+    turn_actions = []
 
     while True:
         effective_thinking = config["thinking"] or force_thinking
@@ -182,7 +209,7 @@ def call_evy(prompt):
                         tools=tools,
                         think=effective_thinking,
                         stream=True,
-                        options={"num_predict": config["max_output_tokens"]},
+                        options={"num_predict": max_output_tokens},
                     )
                     for chunk in stream:
                         response = chunk
@@ -207,7 +234,7 @@ def call_evy(prompt):
                         messages=messages,
                         tools=tools,
                         think=effective_thinking,
-                        options={"num_predict": config["max_output_tokens"]},
+                        options={"num_predict": max_output_tokens},
                     )
                     thinking_animation.stop()
                 break
@@ -234,6 +261,14 @@ def call_evy(prompt):
                 ):
                     result = "User did not allow you to execute this tool."
                     force_thinking = not config["thinking"]
+                    turn_actions.append(
+                        {
+                            "tool-name": tc.function.name,
+                            "arguments": dict(tc.function.arguments),
+                            "results": result,
+                            "success": False,
+                        }
+                    )
                     _log_tool_call(
                         {
                             "tool_name": tc.function.name,
@@ -279,6 +314,14 @@ def call_evy(prompt):
                             "tool names to load_skills."
                         )
                         force_thinking = not config["thinking"]
+                        turn_actions.append(
+                            {
+                                "tool-name": tc.function.name,
+                                "arguments": dict(tc.function.arguments),
+                                "results": result,
+                                "success": False,
+                            }
+                        )
                         _log_tool_call(
                             {
                                 "tool_name": tc.function.name,
@@ -303,7 +346,14 @@ def call_evy(prompt):
                             )
                         loaded_schemas.extend(new_schemas)
                         result = f"Loaded {len(new_schemas)} tool(s): {[s['function']['name'] for s in new_schemas]}"
-                        _log_action(result)
+                        turn_actions.append(
+                            {
+                                "tool-name": tc.function.name,
+                                "arguments": dict(tc.function.arguments),
+                                "results": result,
+                                "success": True,
+                            }
+                        )
                         _log_tool_call(
                             {
                                 "tool_name": tc.function.name,
@@ -322,8 +372,13 @@ def call_evy(prompt):
                         if fn:
                             try:
                                 result = fn(**tc.function.arguments)
-                                _log_action(
-                                    f"Executed tool: {tc.function.name}, ran successfully"
+                                turn_actions.append(
+                                    {
+                                        "tool-name": tc.function.name,
+                                        "arguments": dict(tc.function.arguments),
+                                        "results": result,
+                                        "success": True,
+                                    }
                                 )
                                 _log_tool_call(
                                     {
@@ -340,8 +395,13 @@ def call_evy(prompt):
                                 # to self-correct or surface it to the user
                                 result = f"Tool error ({tc.function.name}): {e}"
                                 force_thinking = not config["thinking"]
-                                _log_action(
-                                    f"Executed tool: {tc.function.name}, failed: {e}"
+                                turn_actions.append(
+                                    {
+                                        "tool-name": tc.function.name,
+                                        "arguments": dict(tc.function.arguments),
+                                        "results": result,
+                                        "success": False,
+                                    }
                                 )
                                 _log_tool_call(
                                     {
@@ -355,8 +415,13 @@ def call_evy(prompt):
                         else:
                             result = f"Unknown tool: {tc.function.name}"
                             force_thinking = not config["thinking"]
-                            _log_action(
-                                f"Executed tool: {tc.function.name}, failed: unknown tool"
+                            turn_actions.append(
+                                {
+                                    "tool-name": tc.function.name,
+                                    "arguments": dict(tc.function.arguments),
+                                    "results": result,
+                                    "success": False,
+                                }
                             )
                             _log_tool_call(
                                 {
@@ -376,14 +441,12 @@ def call_evy(prompt):
                     }
                 )
         else:
-            new_entry = {
-                "timestamp": datetime.now().isoformat(),
-                "prompt": prompt,
-                "response": response.message.content,
-            }
-            with open(BRAIN_PATH, "r", encoding="utf-8") as f:
-                memory_data = json.load(f)
-            memory_data.append(new_entry)
-            with open(BRAIN_PATH, "w", encoding="utf-8") as f:
-                json.dump(memory_data, f, indent=2)
+            _save_brain_entry(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "prompt": prompt,
+                    "actions": turn_actions,
+                    "response": response.message.content,
+                }
+            )
             return response.message.content

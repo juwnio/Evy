@@ -2,21 +2,22 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-BRAIN_PATH = "memory/brain.json"
+EPISODIC_PATH = "memory/episodic-memory.json"
 
 
 def memorise(fact: str) -> str:
-    with open(BRAIN_PATH, "r", encoding="utf-8") as f:
-        memory = json.load(f)
+    with open(EPISODIC_PATH, "r", encoding="utf-8") as f:
+        episodes = json.load(f)
 
-    entry = {
-        "timestamp": datetime.now().isoformat(),
-        "memorised-fact": fact,
-    }
-    memory.append(entry)
+    episodes.append(
+        {
+            "memory-saved-on": datetime.now().isoformat(),
+            "fact": fact,
+        }
+    )
 
-    with open(BRAIN_PATH, "w", encoding="utf-8") as f:
-        json.dump(memory, f, indent=2)
+    with open(EPISODIC_PATH, "w", encoding="utf-8") as f:
+        json.dump(episodes, f, indent=2)
 
     return f"Memorised: {fact}"
 
