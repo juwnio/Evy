@@ -1,0 +1,25 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "shell_run",
+      "description": "Runs a shell command inside the user's Documents directory. Supports pipes (|) for chaining commands. Returns stdout, stderr, and exit code.",
+      "tag": "shell",
+      "module": "skills.skillset.functions.shell.shell",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "The shell command to run."
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Timeout in seconds (default 30, max 60)."
+          }
+        },
+        "required": ["command"]
+      }
+    }
+  }
+]

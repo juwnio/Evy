@@ -1,0 +1,251 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_navigate",
+      "description": "Opens a URL in the browser. Returns the page title and final URL after any redirects. Use this to start browsing or jump to a new page.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The URL to navigate to. https:// is added automatically if no scheme is provided."
+          }
+        },
+        "required": ["url"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_go_back",
+      "description": "Navigates back to the previous page in the browser history. Returns the page title and URL landed on.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_reload",
+      "description": "Reloads the current page. Useful after form submissions or when a page needs to be refreshed.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_close",
+      "description": "Closes the browser and resets the session. Use this when browser tasks are fully complete to free up resources. The browser will relaunch automatically on next use.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_get_text",
+      "description": "Extracts all readable text from the current page, optionally scoped to a CSS selector. Use for summarising, reading articles, or grabbing content from a specific section.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "selector": {
+            "type": "string",
+            "description": "Optional CSS selector to scope text extraction to (e.g. 'article', '#content', '.main'). Defaults to 'body' for the full page."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_get_links",
+      "description": "Returns all links on the current page with their anchor text and URLs. Use this to discover navigation options or find specific pages to visit.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_scroll",
+      "description": "Scrolls the page down by a given number of pixels. Use this for lazy-loaded content, infinite scroll pages, or to trigger content that loads on scroll.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "description": "Number of pixels to scroll down. Defaults to 500. Call multiple times for larger scrolls."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_get_elements",
+      "description": "Discovers interactive elements on the current page. Use 'button' to find clickable buttons, 'input' to find form fields, 'select' to find dropdowns, or 'all' for everything. Always call this before clicking, filling, or selecting to know what's available.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["button", "input", "select", "all"],
+            "description": "Element type to discover. 'button' for clickable buttons, 'input' for form fields, 'select' for dropdowns, 'all' for everything. Defaults to 'all'."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_click",
+      "description": "Clicks an element on the page. Use 'text' for visible text, 'role' for ARIA role + name, 'css' for a CSS selector, 'label' for a form label, or 'placeholder' for a placeholder attribute. Call browser_get_elements first to discover what's available.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "by": {
+            "type": "string",
+            "enum": ["text", "role", "css", "label", "placeholder"],
+            "description": "Locator strategy: 'text' matches visible text, 'role' matches ARIA role + name, 'css' matches a CSS selector, 'label' matches a form label, 'placeholder' matches a placeholder attribute."
+          },
+          "value": {
+            "type": "string",
+            "description": "The value to match (text, role, CSS selector, label text, or placeholder text)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Required when by='role' — the accessible name of the element (e.g. 'Sign in', 'Submit')."
+          }
+        },
+        "required": ["by", "value"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_fill",
+      "description": "Types text into a form field. Use 'label' to match by associated label, 'placeholder' to match by placeholder text, or 'css' for a CSS selector. Call browser_get_elements(type='input') first to discover available fields.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "by": {
+            "type": "string",
+            "enum": ["label", "placeholder", "css"],
+            "description": "Locator strategy: 'label' matches the field's associated label, 'placeholder' matches the placeholder text, 'css' matches a CSS selector."
+          },
+          "value": {
+            "type": "string",
+            "description": "The label text, placeholder text, or CSS selector identifying the field."
+          },
+          "text": {
+            "type": "string",
+            "description": "The text to type into the field."
+          }
+        },
+        "required": ["by", "value", "text"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_select",
+      "description": "Selects an option from a dropdown. Use 'label' to find the select by its associated label, or 'css' for a CSS selector. Provide either option_label (visible text) or option_value (value attribute) to pick the option.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "by": {
+            "type": "string",
+            "enum": ["label", "css"],
+            "description": "Locator strategy: 'label' matches the select's associated label, 'css' matches a CSS selector."
+          },
+          "value": {
+            "type": "string",
+            "description": "The label text or CSS selector identifying the dropdown."
+          },
+          "option_label": {
+            "type": "string",
+            "description": "The visible text of the option to select (e.g. 'United States'). Provide either option_label or option_value."
+          },
+          "option_value": {
+            "type": "string",
+            "description": "The value attribute of the option to select (e.g. 'us'). Provide either option_label or option_value."
+          }
+        },
+        "required": ["by", "value"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "browser_wait_for",
+      "description": "Waits for a CSS selector or visible text to appear on the page before proceeding. Use this after navigation or scrolling to ensure content has loaded before interacting with it.",
+      "tag": "browser",
+      "module": "skills.skillset.functions.browser.browser",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "by": {
+            "type": "string",
+            "enum": ["selector", "text"],
+            "description": "Strategy: 'selector' waits for a CSS selector to appear in the DOM, 'text' waits for visible text to appear."
+          },
+          "value": {
+            "type": "string",
+            "description": "The CSS selector or visible text to wait for."
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "Maximum wait time in milliseconds. Defaults to 10000 (10 seconds)."
+          }
+        },
+        "required": ["value"]
+      }
+    }
+  }
+]

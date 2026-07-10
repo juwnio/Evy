@@ -1,0 +1,32 @@
+# Connection to local LLM
+ollama
+
+# Character to token conversion
+tiktoken
+
+# Controlling Notion
+notion_client
+
+# Utulities
+rich
+dotenv
+
+# TUI
+textual
+
+# urllib3 v2 requires OpenSSL 1.1.1+; macOS Python uses LibreSSL
+urllib3<2
+
+## Browser use
+playwright
+
+# Interactive terminal prompts (arrow-key selection)
+questionary
+
+# Discord bot integration
+discord.py
+discord
+
+# Then run 'playwright install chromium' to install the browser.
+
+

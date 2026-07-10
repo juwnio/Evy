@@ -1,0 +1,21 @@
+{
+  "home_dir": "/Users/tafadzwamandeya/Documents",
+  "model": "llama3.2:latest",
+  "cloud-model": "minimax-m3:cloud",
+  "local": false,
+  "ollama-api-key": "",
+  "context_window": 500000,
+  "limits_pct": {
+    "static": 18.75,
+    "conversation": 37.5,
+    "episodic": 12.5,
+    "output": 6.25
+  },
+  "preserve_count": 5,
+  "max_tools_per_load": 10,
+  "browser_headless": false,
+  "thinking": true,
+  "stream_thinking": true,
+  "git_user_name": "eveagnt-byte",
+  "git_user_email": "eve.agnt@gmail.com"
+}

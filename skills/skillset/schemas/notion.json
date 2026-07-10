@@ -1,0 +1,246 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "list_notion_pages",
+      "description": "Lists all Notion pages with their titles and public visibility status.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "create_notion_page",
+      "description": "Creates a new Notion page. Provide parent_page_id to choose where it goes; otherwise the default from notion-default-page-id in .env is used. If neither is set, Evy will ask for a parent_page_id.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "The title of the new page."
+          },
+          "parent_page_id": {
+            "type": "string",
+            "description": "Optional ID of the parent page. If omitted, falls back to notion-default-page-id in .env."
+          },
+          "content": {
+            "type": "string",
+            "description": "Optional plain-text content to seed the page with. Each non-empty line becomes a paragraph block."
+          }
+        },
+        "required": ["title"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_notion_page_content",
+      "description": "Retrieves the content of a Notion page as readable text. Supports filtering by content type: all blocks, headings only, or todos only.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "description": "The ID of the Notion page to retrieve content from."
+          },
+          "filter": {
+            "type": "string",
+            "enum": ["all", "headings", "todos"],
+            "description": "Content filter. 'all' returns the full page, 'headings' returns h1-h3 headings only, 'todos' returns all to-do items only. Defaults to 'all'."
+          }
+        },
+        "required": ["page_id"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "replace_notion_block",
+      "description": "Finds a block on a Notion page by its exact current text and replaces it with new text. Use get_notion_page_content first to read the exact text of the block you want to change.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "description": "The ID of the Notion page containing the block to update."
+          },
+          "old_text": {
+            "type": "string",
+            "description": "The exact current text of the block to replace."
+          },
+          "new_text": {
+            "type": "string",
+            "description": "The new text to replace it with."
+          }
+        },
+        "required": ["page_id", "old_text", "new_text"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "write_notion_page_content",
+      "description": "Writes content to an existing Notion page. Use 'append' to add to the bottom of the page, or 'replace' to wipe the page and rewrite it entirely.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "description": "The ID of the Notion page to write to. Use list_notion_pages to find valid IDs."
+          },
+          "content": {
+            "type": "string",
+            "description": "Plain-text content to write. Each non-empty line becomes a paragraph block."
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["append", "replace"],
+            "description": "'append' adds content to the bottom of the page. 'replace' clears the page first then writes the new content. Defaults to 'append'."
+          }
+        },
+        "required": ["page_id", "content"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "list_notion_databases",
+      "description": "Lists all databases in the Notion workspace with their IDs, titles, and property schemas.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "create_notion_database",
+      "description": "Creates a new Notion database (table) under a parent page. The 'properties' parameter defines the columns — pass a JSON object where each key is a property name and each value is an object with 'type' and optional type-specific config. Example: {\"Name\": {\"type\": \"title\"}, \"Status\": {\"type\": \"select\", \"options\": [{\"name\": \"Todo\", \"color\": \"gray\"}, {\"name\": \"Done\", \"color\": \"green\"}]}, \"Date\": {\"type\": \"date\"}}.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "parent_page_id": {
+            "type": "string",
+            "description": "The ID of the parent page where the database will be created."
+          },
+          "title": {
+            "type": "string",
+            "description": "The title of the new database."
+          },
+          "properties": {
+            "type": "object",
+            "description": "Property schema defining the columns. Each key is a property name, each value is an object with 'type' and optional config (e.g. {\"Name\": {\"type\": \"title\"}, \"Status\": {\"type\": \"select\", \"select\": {\"options\": [{\"name\": \"Todo\", \"color\": \"gray\"}]}}}). Supported types: title, rich_text, number, select, multi_select, date, checkbox, email, phone, url, files, status."
+          }
+        },
+        "required": ["parent_page_id", "title", "properties"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "query_notion_database",
+      "description": "Queries a Notion database and returns its items (rows). Supports optional filtering and sorting. Returns each item with its property values.",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "database_id": {
+            "type": "string",
+            "description": "The ID of the database to query. Use list_notion_databases to find valid IDs."
+          },
+          "filter": {
+            "type": "object",
+            "description": "Optional filter conditions as a Notion API filter object (e.g. {\"property\": \"Status\", \"status\": {\"equals\": \"Done\"}}). See Notion API docs for full syntax."
+          },
+          "sorts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Sort object with 'property' and 'direction' (ascending/descending)."
+            },
+            "description": "Optional sort criteria array."
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Max items to return (1-100). Defaults to 50.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": ["database_id"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "create_notion_database_item",
+      "description": "Creates a new item (row/page) in a Notion database. The 'properties' parameter should map each property name to its value. IMPORTANT: rich_text and title MUST be ARRAYS of objects, not single objects. Example: {\"Name\": {\"title\": [{\"text\": {\"content\": \"Task 1\"}}]}, \"Notes\": {\"rich_text\": [{\"text\": {\"content\": \"Some note\"}}]}, \"Status\": {\"select\": {\"name\": \"Todo\"}}, \"Date\": {\"date\": {\"start\": \"2026-07-10\"}}}",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "database_id": {
+            "type": "string",
+            "description": "The ID of the database to add the item to."
+          },
+          "properties": {
+            "type": "object",
+            "description": "Property values for the new item. FORMAT RULES: title/rich_text = ARRAY of objects: [{\"text\": {\"content\": \"...\"}}]. select/status = {\"name\": \"Value\"}. date = {\"start\": \"YYYY-MM-DD\"}. checkbox = true/false. Example: {\"Name\": {\"title\": [{\"text\": {\"content\": \"Task 1\"}}]}, \"Notes\": {\"rich_text\": [{\"text\": {\"content\": \"My note\"}}]}, \"Status\": {\"select\": {\"name\": \"Todo\"}}, \"Due\": {\"date\": {\"start\": \"2026-07-10\"}}}"
+          }
+        },
+        "required": ["database_id", "properties"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "update_notion_database_item",
+      "description": "Updates an existing item (page/row) in a Notion database. Provide the page_id of the item and the properties to update. Only the specified properties are changed. IMPORTANT: rich_text and title MUST be ARRAYS of objects, not single objects. Example: {\"Status\": {\"select\": {\"name\": \"Done\"}}, \"Notes\": {\"rich_text\": [{\"text\": {\"content\": \"Updated note\"}}]}}",
+      "tag": "notion",
+      "module": "skills.skillset.functions.notion.notion",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "description": "The ID of the item (page) to update, as returned by query_notion_database."
+          },
+          "properties": {
+            "type": "object",
+            "description": "Property values to update. FORMAT RULES: title/rich_text = ARRAY of objects: [{\"text\": {\"content\": \"...\"}}]. select/status = {\"name\": \"Value\"}. date = {\"start\": \"YYYY-MM-DD\"}. Example: {\"Status\": {\"select\": {\"name\": \"Done\"}}, \"Notes\": {\"rich_text\": [{\"text\": {\"content\": \"Updated note\"}}]}}"
+          }
+        },
+        "required": ["page_id", "properties"]
+      }
+    }
+  }
+]

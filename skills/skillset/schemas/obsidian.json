@@ -1,0 +1,124 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "obsidian_read",
+      "description": "Reads the content of a note from the Obsidian vault by its vault-relative path. Returns the note's markdown content, frontmatter, tags, and filesystem metadata.",
+      "tag": "obsidian",
+      "module": "skills.skillset.functions.obsidian.obsidian",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Vault-relative path to the note, e.g. 'projects/my-note.md'"
+          }
+        },
+        "required": ["path"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "obsidian_write",
+      "description": "Creates a new note or overwrites an existing one in the Obsidian vault by its vault-relative path. Content is markdown.",
+      "tag": "obsidian",
+      "module": "skills.skillset.functions.obsidian.obsidian",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Vault-relative path, e.g. 'daily/2026-06-16.md'"
+          },
+          "content": {
+            "type": "string",
+            "description": "Full markdown content to write to the file."
+          }
+        },
+        "required": ["path", "content"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "obsidian_append",
+      "description": "Appends content to the end of an existing note in the Obsidian vault. If the file doesn't exist, it is created first.",
+      "tag": "obsidian",
+      "module": "skills.skillset.functions.obsidian.obsidian",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Vault-relative path to the note."
+          },
+          "content": {
+            "type": "string",
+            "description": "Markdown content to append."
+          }
+        },
+        "required": ["path", "content"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "obsidian_search",
+      "description": "Full-text search across all notes in the Obsidian vault. Returns a list of matching file paths with content snippets.",
+      "tag": "obsidian",
+      "module": "skills.skillset.functions.obsidian.obsidian",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query text."
+          }
+        },
+        "required": ["query"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "obsidian_list",
+      "description": "Lists all files and subdirectories inside a vault directory. Use '/' for root or a subdirectory path like 'projects/'.",
+      "tag": "obsidian",
+      "module": "skills.skillset.functions.obsidian.obsidian",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Vault-relative directory path, e.g. 'projects' or '' for root. Defaults to root."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "obsidian_open",
+      "description": "Opens a file in the Obsidian editor UI by its vault-relative path.",
+      "tag": "obsidian",
+      "module": "skills.skillset.functions.obsidian.obsidian",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Vault-relative path to the file to open."
+          }
+        },
+        "required": ["path"]
+      }
+    }
+  }
+]

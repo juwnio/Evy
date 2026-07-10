@@ -1,0 +1,75 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "send_email",
+      "description": "Sends an email using one of your configured email connections. Permission is handled by the system — user approval is required before this tool runs.",
+      "tag": "email",
+      "module": "skills.skillset.functions.email.send",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Recipient email address."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line."
+          },
+          "body": {
+            "type": "string",
+            "description": "Email body text (plain text)."
+          },
+          "cc": {
+            "type": "string",
+            "description": "Optional CC recipient email address."
+          },
+          "connection_id": {
+            "type": "string",
+            "description": "The ID of the email connection to use (e.g. 'eml_abc123'). Omit if only one connection is configured."
+          }
+        },
+        "required": ["to", "subject", "body"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "send_batch_email",
+      "description": "Sends the same email to multiple recipients using one of your configured email connections. Permission is handled by the system — user approval is required before this tool runs.",
+      "tag": "email",
+      "module": "skills.skillset.functions.email.send",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of recipient email addresses."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line."
+          },
+          "body": {
+            "type": "string",
+            "description": "Email body text (plain text)."
+          },
+          "cc": {
+            "type": "string",
+            "description": "Optional CC recipient email address."
+          },
+          "connection_id": {
+            "type": "string",
+            "description": "The ID of the email connection to use (e.g. 'eml_abc123'). Omit if only one connection is configured."
+          }
+        },
+        "required": ["to", "subject", "body"]
+      }
+    }
+  }
+]
