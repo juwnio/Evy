@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from rich.markup import escape
 from rich.text import Text
 
 from textual.worker import Worker
@@ -420,7 +421,10 @@ class StateModal(ModalScreen[None]):
                 lines.append(f"  {key}: {status}")
             else:
                 lines.append(f"  {key}: {value}")
-        active = config.get("cloud-model", "?") if not config.get("local", True) else config.get("model", "?")
+        mode = config.get("model_mode", "local")
+        model_key = {"local": "model", "cloud": "cloud-model", "collab": "collab-model"}.get(mode, "model")
+        active = config.get(model_key, "?")
+        lines.append(f"  mode: {mode}")
         lines.append(f"  active_model: {active}")
 
         with Vertical(id="state-modal"):
@@ -501,8 +505,10 @@ class EvyCommands(Provider):
             ("/state", "Show current configuration"),
             ("/headless", "Set browser to headless mode"),
             ("/head", "Set browser to headed mode"),
-            ("/cloud", "Switch to cloud model"),
             ("/local", "Switch to local model"),
+            ("/cloud", "Switch to cloud model"),
+            ("/collab", "Switch to collab/gateway model"),
+            ("/mode", "Cycle model mode: local → cloud → collab → local"),
             ("/attach", "Open file picker to attach an image"),
             ("/clear", "Clear chat log"),
             ("/export", "Export conversation to file"),
@@ -709,6 +715,8 @@ class EvyApp(App[None]):
         Binding("ctrl+t", "toggle_thinking", "Think"),
         Binding("ctrl+b", "toggle_browser", "Browser"),
         Binding("ctrl+s", "edit_config", "Config"),
+        Binding("ctrl+m", "toggle_mode", "Mode"),
+        Binding("ctrl+g", "set_collab", "Collab", priority=True),
         Binding("ctrl+i", "show_state", "State"),
         Binding("ctrl+q", "quit", "Exit"),
         Binding("ctrl+c", "clear_input", "Clear", priority=True),
@@ -840,9 +848,11 @@ class EvyApp(App[None]):
         thinking_on = config.get("thinking", True)
         t_status = "[bold]On[/bold]" if thinking_on else "[dim]Off[/dim]"
         entry("Toggle Think", "ctrl+t", t_status)
-        local = config.get("local", True)
-        entry("Cloud", "/cloud", "●" if not local else "○")
-        entry("Local", "/local", "○" if not local else "●")
+        mode = config.get("model_mode", "local")
+        entry("Local",  "/local",  "●" if mode == "local" else "○")
+        entry("Cloud",  "/cloud",  "●" if mode == "cloud" else "○")
+        entry("Collab", "/collab", "●" if mode == "collab" else "○")
+        entry("Cycle mode", "ctrl+m")
         entry("State", "ctrl+i")
 
         gap()
@@ -1250,7 +1260,7 @@ class EvyApp(App[None]):
             self._set_status("Consolidating memory…")
 
         elif t == "warning":
-            self._add_system_message(event["text"])
+            self._add_system_message(escape(event["text"]))
 
         elif t == "thinking_chunk":
             self._set_status("Ruminating…")
@@ -1405,7 +1415,10 @@ class EvyApp(App[None]):
                     self._add_system_message(f"  [dim]{key}:[/dim] {'[bold]yes[/bold]' if value else '[dim]no[/dim]'}")
                 else:
                     self._add_system_message(f"  [dim]{key}:[/dim] {value}")
-            active = config.get('cloud-model', '?') if not config.get('local', True) else config.get('model', '?')
+            mode = config.get("model_mode", "local")
+            model_key = {"local": "model", "cloud": "cloud-model", "collab": "collab-model"}.get(mode, "model")
+            active = config.get(model_key, "?")
+            self._add_system_message(f"  [dim]mode:[/dim] {mode}")
             self._add_system_message(f"  [dim]active_model:[/dim] {active}")
             return
         elif cmd == "/browser":
@@ -1430,13 +1443,23 @@ class EvyApp(App[None]):
                 self.notify("You can not change browser state while Evy is working", severity="warning", timeout=3)
                 return
             _set_browser_headless(False)
+        elif cmd == "/mode":
+            config = load_config()
+            mode = config.get("model_mode", "local")
+            order = {"local": "cloud", "cloud": "collab", "collab": "local"}
+            config["model_mode"] = order.get(mode, "local")
+            _save_config(config)
         elif cmd == "/cloud":
             config = load_config()
-            config["local"] = False
+            config["model_mode"] = "cloud"
             _save_config(config)
         elif cmd == "/local":
             config = load_config()
-            config["local"] = True
+            config["model_mode"] = "local"
+            _save_config(config)
+        elif cmd == "/collab":
+            config = load_config()
+            config["model_mode"] = "collab"
             _save_config(config)
         elif cmd == "/clear":
             self._clear_chat()
@@ -1552,6 +1575,12 @@ end if
 
     def action_toggle_thinking(self) -> None:
         self._handle_command("/think")
+
+    def action_toggle_mode(self) -> None:
+        self._handle_command("/mode")
+
+    def action_set_collab(self) -> None:
+        self._handle_command("/collab")
 
     def action_show_state(self) -> None:
         self.push_screen(StateModal())
