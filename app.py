@@ -921,7 +921,7 @@ class EvyApp(App[None]):
 
     def _show_permission_prompt(self, tool_name: str, tool_args: dict | None = None) -> None:
         self._awaiting_permission = True
-        self._add_system_markup(f"[bold]ⓘ  Evy wants to use: {tool_name}[/bold]")
+        self._add_system_markup(f"[bold]ⓘ  Evy wants to use: {escape(tool_name)}[/bold]")
         if tool_name == "file_system_patch" and tool_args:
             path_val = str(tool_args.get("path", ""))
             if len(path_val) > 100:
@@ -994,7 +994,7 @@ class EvyApp(App[None]):
         except Exception as exc:
                 self.call_from_thread(
                 self._add_system_markup,
-                f"[#888]Agent error: {exc}[/#888]",
+                f"[#888]Agent error: {escape(str(exc))}[/#888]",
             )
         finally:
             self._agent_lock.release()
@@ -1019,7 +1019,7 @@ class EvyApp(App[None]):
                 max_output_tokens=max_output,
             )
         except Exception as exc:
-            self.call_from_thread(self._add_system_markup, f"[#888]Consolidation error: {exc}[/#888]")
+            self.call_from_thread(self._add_system_markup, f"[#888]Consolidation error: {escape(str(exc))}[/#888]")
             return
         self.call_from_thread(self._update_brain_occupation)
         self.call_from_thread(self._add_system_markup, "[bold]✓ Memory consolidated[/bold]")
@@ -1474,7 +1474,7 @@ class EvyApp(App[None]):
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             dst = f"memory/brain-{ts}.json"
             shutil.copy(BRAIN_PATH, dst)
-            self._add_system_markup(f"[dim]Exported brain to {dst}[/dim]")
+            self._add_system_markup(f"[dim]Exported brain to {escape(dst)}[/dim]")
         elif cmd == "/reset":
             os.makedirs(os.path.dirname(BRAIN_PATH), exist_ok=True)
             with open(BRAIN_PATH, "w", encoding="utf-8") as f:
@@ -1524,13 +1524,13 @@ end if
                 return
             self._add_system_markup("[bold]Configured Email Connections:[/bold]")
             for c in connections:
-                self._add_system_markup(f"  [dim]{c['id']}[/dim] — {c['email']}  ([italic]{c['description']}[/italic])")
+                self._add_system_markup(f"  [dim]{escape(c['id'])}[/dim] — {escape(c['email'])}  ([italic]{escape(c['description'])}[/italic])")
             return
         elif cmd == "Config (Ctrl+S)":
             self.action_edit_config()
             return
         else:
-            self._add_system_markup(f"[dim]Unknown command: {cmd}[/dim]")
+            self._add_system_markup(f"[dim]Unknown command: {escape(cmd)}[/dim]")
             return
 
         self._update_commands()
@@ -1609,7 +1609,7 @@ end if
             if result:
                 conn = add_connection(result["email"], result["app_password"], result["description"])
                 self._update_email_header()
-                self._add_system_markup(f"[bold]\u2713[/bold] Email connection added: [dim]{conn['id']}[/dim] ({conn['email']} — {conn['description']})")
+                self._add_system_markup(f"[bold]\u2713[/bold] Email connection added: [dim]{escape(conn['id'])}[/dim] ({escape(conn['email'])} — {escape(conn['description'])})")
                 # Refresh gateway context
                 conns = list_connections()
                 lines = ["Available email connections:"]
