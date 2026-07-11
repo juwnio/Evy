@@ -1,6 +1,9 @@
 # Connection to local LLM
 ollama
 
+# OpenAI-compatible API client (used for collab/gateway mode)
+openai
+
 # Character to token conversion
 tiktoken
 

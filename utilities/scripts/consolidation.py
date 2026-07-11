@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 
 from utilities.scripts.manipulation import (
+    _model_chat,
     load_config,
     load_consolidation_context,
     load_episodic_consolidation_context,
@@ -59,7 +60,7 @@ def _build_consolidation_prompt(serialized_head: str, previous_summary: str | No
 
 def consolidate_conversation(memory, max_output_tokens=2048, preserve_count=PRESERVE_COUNT):
     config = load_config()
-    client, model = resolve_model_config(config)
+    client, model, provider = resolve_model_config(config)
     system_context = load_consolidation_context()
 
     head = memory[:-preserve_count]
@@ -80,7 +81,8 @@ def consolidate_conversation(memory, max_output_tokens=2048, preserve_count=PRES
 
     prompt = _build_consolidation_prompt(serialized_head, previous_summary)
 
-    response = client.chat(
+    response = _model_chat(
+        client, provider,
         model=model,
         messages=[
             {"role": "system", "content": system_context},
@@ -113,10 +115,11 @@ def consolidate_conversation(memory, max_output_tokens=2048, preserve_count=PRES
 
 def consolidate_episodic(episodic, max_output_tokens=2048):
     config = load_config()
-    client, model = resolve_model_config(config)
+    client, model, provider = resolve_model_config(config)
     system_context = load_episodic_consolidation_context()
 
-    response = client.chat(
+    response = _model_chat(
+        client, provider,
         model=model,
         messages=[
             {
