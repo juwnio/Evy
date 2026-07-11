@@ -904,7 +904,7 @@ class EvyApp(App[None]):
             return ""
         parts = []
         for key, value in tool_args.items():
-            val_str = str(value)
+            val_str = escape(str(value))
             if len(val_str) > 100:
                 val_str = val_str[:97] + "..."
             parts.append(f'[dim]{key}=[/][#eee]"{val_str}"[/]')
@@ -921,23 +921,23 @@ class EvyApp(App[None]):
 
     def _show_permission_prompt(self, tool_name: str, tool_args: dict | None = None) -> None:
         self._awaiting_permission = True
-        self._add_system_message(f"[bold]ⓘ  Evy wants to use: {tool_name}[/bold]")
+        self._add_system_markup(f"[bold]ⓘ  Evy wants to use: {tool_name}[/bold]")
         if tool_name == "file_system_patch" and tool_args:
             path_val = str(tool_args.get("path", ""))
             if len(path_val) > 100:
                 path_val = path_val[:97] + "..."
-            self._add_system_message(f"[bold]   path:[/] {path_val}")
+            self._add_system_markup(f"[bold]   path:[/] {escape(path_val)}")
             old_text = tool_args.get("old_text", "")
             new_text = tool_args.get("new_text", "")
-            self._add_system_message("   [#666]Old text:[/]")
+            self._add_system_markup("   [#666]Old text:[/]")
             for ln in old_text.rstrip("\n").split("\n"):
-                self._add_system_message(f"   [dim]{ln}[/]")
-            self._add_system_message("   [#666]New text:[/]")
+                self._add_system_markup(f"   [dim]{escape(ln)}[/]")
+            self._add_system_markup("   [#666]New text:[/]")
             for ln in new_text.rstrip("\n").split("\n"):
-                self._add_system_message(f"   [bold]{ln}[/]")
+                self._add_system_markup(f"   [bold]{escape(ln)}[/]")
         elif tool_args:
-            self._add_system_message(self._format_tool_args(tool_args))
-        self._add_system_message(f"[bold]   Give permission 'yes' or 'no'[/bold]")
+            self._add_system_markup(self._format_tool_args(tool_args))
+        self._add_system_markup(f"[bold]   Give permission 'yes' or 'no'[/bold]")
         inp = self.query_one("#prompt-input", Input)
         inp.placeholder = "Type 'yes' or 'no' to give permission"
 
@@ -992,8 +992,8 @@ class EvyApp(App[None]):
                     break
                 self.post_message(EvyEvent(event))
         except Exception as exc:
-            self.call_from_thread(
-                self._add_system_message,
+                self.call_from_thread(
+                self._add_system_markup,
                 f"[#888]Agent error: {exc}[/#888]",
             )
         finally:
@@ -1019,10 +1019,10 @@ class EvyApp(App[None]):
                 max_output_tokens=max_output,
             )
         except Exception as exc:
-            self.call_from_thread(self._add_system_message, f"[#888]Consolidation error: {exc}[/#888]")
+            self.call_from_thread(self._add_system_markup, f"[#888]Consolidation error: {exc}[/#888]")
             return
         self.call_from_thread(self._update_brain_occupation)
-        self.call_from_thread(self._add_system_message, "[bold]✓ Memory consolidated[/bold]")
+        self.call_from_thread(self._add_system_markup, "[bold]✓ Memory consolidated[/bold]")
 
     # ── Heartbeat scheduler ──────────────────────────────────────────
 
@@ -1085,7 +1085,7 @@ class EvyApp(App[None]):
                 hb_repeat = hb.get("repeat")
 
             self.call_from_thread(
-                self._add_system_message,
+                self._add_system_markup,
                 f"[bold]\u2661 Heartbeat:[/bold] [dim]{hb_name}[/dim]",
             )
 
@@ -1132,7 +1132,7 @@ class EvyApp(App[None]):
 
             status_icon = "[bold green]\u2713[/bold green]" if status == "success" else "[bold red]\u2717[/bold red]"
             self.call_from_thread(
-                self._add_system_message,
+                self._add_system_markup,
                 f"{status_icon} Heartbeat [bold]{hb_name}[/bold] → {status}",
             )
         finally:
@@ -1176,6 +1176,11 @@ class EvyApp(App[None]):
         container.scroll_end(animate=False)
 
     def _add_system_message(self, text: str) -> None:
+        container = self.query_one("#chat-messages", VerticalScroll)
+        container.mount(Static(escape(text), classes="system-message"))
+        container.scroll_end(animate=False)
+
+    def _add_system_markup(self, text: str) -> None:
         container = self.query_one("#chat-messages", VerticalScroll)
         container.mount(Static(text, classes="system-message"))
         container.scroll_end(animate=False)
@@ -1330,7 +1335,7 @@ class EvyApp(App[None]):
                 widget.set_result(str(result), status)
 
         elif t == "retry":
-            self._add_system_message(f"[dim]Ollama error, retrying ({event['attempt']}/3)...[/dim]")
+            self._add_system_markup(f"[dim]Ollama error, retrying ({event['attempt']}/3)...[/dim]")
 
         elif t == "brain_update":
             self._update_brain_occupation(char_count=event["char_count"], token_count=event["token_count"])
@@ -1361,7 +1366,7 @@ class EvyApp(App[None]):
         cmd = cmd.strip()
 
         if cmd in ("/?", "/help"):
-            self._add_system_message("")
+            self._add_system_markup("")
             lines = [
                 "[bold]Model & Thinking[/bold]",
                 "[dim]    /think        Toggle thinking On/Off[/dim]",
@@ -1389,7 +1394,7 @@ class EvyApp(App[None]):
                 "[dim]    ctrl+e        Add a new email connection[/dim]",
             ]
             for line in lines:
-                self._add_system_message(line)
+                self._add_system_markup(line)
         elif cmd == "/bye":
             self.exit()
             return
@@ -1406,20 +1411,20 @@ class EvyApp(App[None]):
             _save_config(config)
         elif cmd == "/state":
             config = load_config()
-            self._add_system_message("[bold]ⓘ  Configuration[/bold]")
+            self._add_system_markup("[bold]ⓘ  Configuration[/bold]")
             for key, value in config.items():
                 if key == "ollama-api-key":
                     display = f"{value[:8]}..." if value else "(not set)"
-                    self._add_system_message(f"  [dim]{key}:[/dim] {display}")
+                    self._add_system_markup(f"  [dim]{key}:[/dim] {escape(display)}")
                 elif isinstance(value, bool):
-                    self._add_system_message(f"  [dim]{key}:[/dim] {'[bold]yes[/bold]' if value else '[dim]no[/dim]'}")
+                    self._add_system_markup(f"  [dim]{key}:[/dim] {'[bold]yes[/bold]' if value else '[dim]no[/dim]'}")
                 else:
-                    self._add_system_message(f"  [dim]{key}:[/dim] {value}")
+                    self._add_system_markup(f"  [dim]{key}:[/dim] {escape(str(value))}")
             mode = config.get("model_mode", "local")
             model_key = {"local": "model", "cloud": "cloud-model", "collab": "collab-model"}.get(mode, "model")
             active = config.get(model_key, "?")
-            self._add_system_message(f"  [dim]mode:[/dim] {mode}")
-            self._add_system_message(f"  [dim]active_model:[/dim] {active}")
+            self._add_system_markup(f"  [dim]mode:[/dim] {mode}")
+            self._add_system_markup(f"  [dim]active_model:[/dim] {active}")
             return
         elif cmd == "/browser":
             if self._agent_worker and self._agent_worker.is_running:
@@ -1469,14 +1474,14 @@ class EvyApp(App[None]):
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             dst = f"memory/brain-{ts}.json"
             shutil.copy(BRAIN_PATH, dst)
-            self._add_system_message(f"[dim]Exported brain to {dst}[/dim]")
+            self._add_system_markup(f"[dim]Exported brain to {dst}[/dim]")
         elif cmd == "/reset":
             os.makedirs(os.path.dirname(BRAIN_PATH), exist_ok=True)
             with open(BRAIN_PATH, "w", encoding="utf-8") as f:
                 json.dump([], f)
             self._clear_chat()
             self._update_brain_occupation()
-            self._add_system_message("[bold]⌘[/bold] [dim]Conversation reset[/dim]")
+            self._add_system_markup("[bold]⌘[/bold] [dim]Conversation reset[/dim]")
         elif cmd == "/attach":
             if self._attached_images:
                 self.notify("Already has an attached image. Click ✕ to remove it first.", severity="warning", timeout=3)
@@ -1515,17 +1520,17 @@ end if
         elif cmd == "/emails":
             conns = list_connections()
             if not conns:
-                self._add_system_message("[dim]No email connections configured. Use [bold]ctrl+e[/bold] to add one.[/dim]")
+                self._add_system_markup("[dim]No email connections configured. Use [bold]ctrl+e[/bold] to add one.[/dim]")
                 return
-            self._add_system_message("[bold]Configured Email Connections:[/bold]")
-            for c in conns:
-                self._add_system_message(f"  [dim]{c['id']}[/dim] — {c['email']}  ([italic]{c['description']}[/italic])")
+            self._add_system_markup("[bold]Configured Email Connections:[/bold]")
+            for c in connections:
+                self._add_system_markup(f"  [dim]{c['id']}[/dim] — {c['email']}  ([italic]{c['description']}[/italic])")
             return
         elif cmd == "Config (Ctrl+S)":
             self.action_edit_config()
             return
         else:
-            self._add_system_message(f"[dim]Unknown command: {cmd}[/dim]")
+            self._add_system_markup(f"[dim]Unknown command: {cmd}[/dim]")
             return
 
         self._update_commands()
@@ -1571,7 +1576,7 @@ end if
             self._thinking_flush_handle = None
         self._stop_thinking_spinner()
         self._clear_status()
-        self._add_system_message("[bold]⽚ Evy was cut short[/bold]")
+        self._add_system_markup("[bold]⽚ Evy was cut short[/bold]")
 
     def action_toggle_thinking(self) -> None:
         self._handle_command("/think")
@@ -1604,7 +1609,7 @@ end if
             if result:
                 conn = add_connection(result["email"], result["app_password"], result["description"])
                 self._update_email_header()
-                self._add_system_message(f"[bold]\u2713[/bold] Email connection added: [dim]{conn['id']}[/dim] ({conn['email']} — {conn['description']})")
+                self._add_system_markup(f"[bold]\u2713[/bold] Email connection added: [dim]{conn['id']}[/dim] ({conn['email']} — {conn['description']})")
                 # Refresh gateway context
                 conns = list_connections()
                 lines = ["Available email connections:"]
