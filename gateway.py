@@ -8,12 +8,13 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from ollama._types import ResponseError
+
 from utilities.scripts.consolidation import PRESERVE_COUNT, consolidate_conversation, consolidate_episodic, _serialize_conversation
 from utilities.scripts.conversion import consolidate_context, count_tokens
 from utilities.scripts.manipulation import (
     Client,
     _LLM_TIMEOUT,
-    _model_chat,
     load_config,
     load_memory,
     load_skills_context,
@@ -138,7 +139,7 @@ def call_evy_stream(prompt: str, images: list[str] | None = None):
 
     config = load_config()
     try:
-        client, model, provider = resolve_model_config(config)
+        client, model = resolve_model_config(config)
     except ValueError as e:
         yield {"type": "final", "text": str(e)}
         return
@@ -261,7 +262,7 @@ def call_evy_stream(prompt: str, images: list[str] | None = None):
                         thinking_fragments = []
                         tool_calls = None
                         response = None
-                        stream = _model_chat(client, provider, **chat_kwargs, stream=True)
+                        stream = client.chat(**chat_kwargs, stream=True)
                         for chunk in stream:
                             response = chunk
                             if chunk.message.thinking:
@@ -282,10 +283,10 @@ def call_evy_stream(prompt: str, images: list[str] | None = None):
                         response.message.tool_calls = tool_calls
                     else:
                         yield {"type": "thinking_spinner", "state": "start"}
-                        response = _model_chat(client, provider, **chat_kwargs)
+                        response = client.chat(**chat_kwargs)
                         yield {"type": "thinking_spinner", "state": "stop"}
                     break
-                except Exception as e:
+                except ResponseError as e:
                     if "does not support thinking" in str(e):
                         effective_thinking = False
                         continue
@@ -298,25 +299,9 @@ def call_evy_stream(prompt: str, images: list[str] | None = None):
             # Reset after use — forced thinking only lasts one turn
             force_thinking = False
 
-            # Convert response.message (SimpleNamespace) to a proper dict for
-            # compatibility with both ollama and OpenAI providers.
-            msg = response.message
-            assistant_msg = {"role": "assistant", "content": msg.content}
-            if msg.tool_calls:
-                assistant_msg["tool_calls"] = [
-                    {
-                        "id": tc.id if hasattr(tc, "id") and tc.id else "",
-                        "type": "function",
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": json.dumps(tc.function.arguments),
-                        },
-                    }
-                    for tc in msg.tool_calls
-                ]
-            messages.append(assistant_msg)
+            messages.append(response.message)
 
-            if msg.tool_calls:
+            if response.message.tool_calls:
                 for tc in response.message.tool_calls:
                     frames_list_name = "memorising" if tc.function.name == "memorise" else "acting"
 
@@ -347,7 +332,7 @@ def call_evy_stream(prompt: str, images: list[str] | None = None):
                         messages.append(
                             {
                                 "role": "tool",
-                                "tool_call_id": tc.id if hasattr(tc, "id") and tc.id else "",
+                                "tool_name": tc.function.name,
                                 "content": result,
                             }
                         )
@@ -528,7 +513,7 @@ def call_evy_stream(prompt: str, images: list[str] | None = None):
                     messages.append(
                         {
                             "role": "tool",
-                            "tool_call_id": tc.id if hasattr(tc, "id") and tc.id else "",
+                            "tool_name": tc.function.name,
                             "content": result_str,
                         }
                     )
@@ -697,7 +682,7 @@ def execute_heartbeat(prompt: str) -> tuple[str, str]:
                         "Primary tools (search_skills, load_skills, grep, etc.) are always available."
                     )
             tool_calls_made.append({"tool": tc.function.name, "arguments": dict(tc.function.arguments), "result": str(result)})
-            messages.append({"role": "tool", "tool_call_id": tc.id if hasattr(tc, "id") and tc.id else "", "content": str(result)})
+            messages.append({"role": "tool", "tool_name": tc.function.name, "content": str(result)})
         tools = [
             {**s, "function": {k: v for k, v in s["function"].items() if k not in ("tag", "module")}}
             for s in primary_schemas + loaded_schemas
