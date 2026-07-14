@@ -4,12 +4,14 @@ import difflib
 import json
 import os
 import subprocess
+import tempfile
 import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 from rich.text import Text
+from groq import Groq
 
 from textual.worker import Worker
 from textual import on, work
@@ -717,6 +719,7 @@ class EvyApp(App[None]):
         Binding("ctrl+a", "toggle_activity", "Activity", priority=True),
         Binding("cmd+a", "toggle_activity", "Activity"),
         Binding("ctrl+e", "add_email_connection", "Email", priority=True),
+        Binding("ctrl+v", "toggle_voice", "Voice", priority=True),
         Binding("ctrl+slash", "show_help", "Help"),
     ]
     COMMANDS = {EvyCommands}
@@ -815,8 +818,10 @@ class EvyApp(App[None]):
         )
 
     def _update_discord_header(self, connected: bool) -> None:
-        status = "[bold]Connected to Discord[/bold]" if connected else "[dim]Not connected to Discord[/dim]"
-        self.query_one("#evy-status", Static).update(status)
+        base = "[bold]Connected to Discord[/bold]" if connected else "[dim]Not connected to Discord[/dim]"
+        if self._voice_mode:
+            base += " + ⾳ Voice Activated"
+        self.query_one("#evy-status", Static).update(base)
 
     def _update_commands(self) -> None:
         config = load_config()
@@ -971,12 +976,13 @@ class EvyApp(App[None]):
         self._cancel_event.clear()
         imgs = images or self._attached_images
         self._attached_images = []
-        self._agent_gen = call_evy_stream(prompt, images=imgs)
+        self._agent_gen = call_evy_stream(prompt, images=imgs, voice_mode=self._voice_mode)
         self._agent_worker = self.run_agent()
 
     @work(thread=True, exclusive=True)
     def run_agent(self) -> None:
         gen = self._agent_gen
+        final_text = None
         self._agent_lock.acquire()
         try:
             for event in gen:
@@ -984,12 +990,17 @@ class EvyApp(App[None]):
                     gen.close()
                     break
                 self.post_message(EvyEvent(event))
+                if event.get("type") == "final":
+                    final_text = event.get("text", "")
         except Exception as exc:
             self.call_from_thread(
                 self._add_system_message,
                 f"[#888]Agent error: {exc}[/#888]",
             )
         finally:
+            if self._voice_mode and final_text and not self._cancel_event.is_set():
+                self.call_from_thread(self._add_system_message, f"[#888]Voice: final_text captured ({len(final_text)} chars), starting TTS...[/#888]")
+                self._speak(final_text)
             self._agent_lock.release()
             self._agent_gen = None
 
@@ -1155,6 +1166,8 @@ class EvyApp(App[None]):
         self._last_tool_name: str | None = None
         self._last_tool_widget: ToolWidget | None = None
         self._agent_lock = threading.Lock()
+        self._voice_mode: bool = False
+        self._audio_process: subprocess.Popen | None = None
 
     # ── Chat widget helpers ───────────────────────────────────────────
 
@@ -1538,6 +1551,9 @@ end if
             if self._permission_event:
                 self._permission_event.set()
             return
+        if self._audio_process:
+            self._audio_process.kill()
+            self._audio_process = None
         if not self._agent_worker or not self._agent_worker.is_running:
             return
         self._cancel_event.set()
@@ -1552,6 +1568,12 @@ end if
         self._stop_thinking_spinner()
         self._clear_status()
         self._add_system_message("[bold]⽚ Evy was cut short[/bold]")
+
+    def action_toggle_voice(self) -> None:
+        self._voice_mode = not self._voice_mode
+        state = "ON" if self._voice_mode else "OFF"
+        self._update_discord_header(bool(os.environ.get("discord-token")))
+        self._add_system_message(f"[bold]⽳ Voice mode {state}[/bold]")
 
     def action_toggle_thinking(self) -> None:
         self._handle_command("/think")
@@ -1588,8 +1610,69 @@ end if
                 _gateway_mod._email_connections_context = "\n".join(lines)
         self.push_screen(AddEmailModal(), on_result)
 
+    def _speak(self, text: str) -> None:
+        api_key = os.environ.get("groq-api-key")
+        if not api_key:
+            self.call_from_thread(self._add_system_message, "[#888]Voice: no groq-api-key in .env[/#888]")
+            return
+        try:
+            chunks = _split_for_tts(text, max_chars=195)
+            self.call_from_thread(self._add_system_message, f"[#888]Voice: generating speech ({len(text)} chars, {len(chunks)} chunk{'s' if len(chunks) != 1 else ''})...[/#888]")
+            client = Groq(api_key=api_key)
+            all_audio = b""
+            for i, chunk in enumerate(chunks):
+                response = client.audio.speech.create(
+                    model="canopylabs/orpheus-v1-english",
+                    voice="hannah",
+                    input=chunk,
+                    response_format="wav",
+                )
+                all_audio += response.read()
+                if len(chunks) > 1:
+                    self.call_from_thread(self._add_system_message, f"[#888]Voice: chunk {i + 1}/{len(chunks)} done[/#888]")
+            tmp_path = tempfile.mktemp(suffix=".wav")
+            with open(tmp_path, "wb") as f:
+                f.write(all_audio)
+            self.call_from_thread(self._add_system_message, f"[#888]Voice: playing audio ({len(all_audio)} bytes)...[/#888]")
+            self._audio_process = subprocess.Popen(["afplay", tmp_path])
+            self._audio_process.wait()
+            self._audio_process = None
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+        except Exception as e:
+            self.call_from_thread(self._add_system_message, f"[#888]Voice error: {e}[/#888]")
+            self._audio_process = None
+
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
+
+def _split_for_tts(text: str, max_chars: int = 195) -> list[str]:
+    """Split text into chunks that fit within the Groq TTS character limit."""
+    if len(text) <= max_chars:
+        return [text]
+
+    chunks: list[str] = []
+    remaining = text.strip()
+
+    while remaining:
+        if len(remaining) <= max_chars:
+            chunks.append(remaining)
+            break
+
+        cut = max_chars
+        for sep in (". ", "! ", "? ", "; ", ", ", " "):
+            idx = remaining.rfind(sep, 0, max_chars)
+            if idx > max_chars // 3:
+                cut = idx + len(sep)
+                break
+
+        chunks.append(remaining[:cut].strip())
+        remaining = remaining[cut:].strip()
+
+    return [c for c in chunks if c]
+
 
 def _load_config():
     with open("utilities/config.json", "r") as f:

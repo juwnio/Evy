@@ -130,7 +130,7 @@ def _check_permission(tool_name: str, tool_args: dict | None = None) -> bool:
     return True
 
 
-def call_evy_stream(prompt: str, images: list[str] | None = None):
+def call_evy_stream(prompt: str, images: list[str] | None = None, voice_mode: bool = False):
     # Clear actions log for this prompt
     with open(ACTIONS_LOG_PATH, "w", encoding="utf-8") as f:
         json.dump([], f)
@@ -229,6 +229,18 @@ def call_evy_stream(prompt: str, images: list[str] | None = None):
         user_msg,
         {"role": "system", "content": skills_context},
     ])
+
+    if voice_mode:
+        messages.append({
+            "role": "system",
+            "content": (
+                "VOICE MODE ACTIVE \u2014 The user is listening to your responses as spoken audio. "
+                "Reply in short, natural, conversational sentences. Do NOT use tables, bullet "
+                "lists, code blocks, or any formatted data representation. Explain data and "
+                "information verbally in plain spoken English. Keep responses brief and "
+                "conversational \u2014 as if you're talking to someone, not writing to them."
+            ),
+        })
 
     # Temporary thinking: force thinking on for one turn after an error,
     # but only if config thinking is off — restores after that turn.
