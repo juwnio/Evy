@@ -999,7 +999,6 @@ class EvyApp(App[None]):
             )
         finally:
             if self._voice_mode and final_text and not self._cancel_event.is_set():
-                self.call_from_thread(self._add_system_message, f"[#888]Voice: final_text captured ({len(final_text)} chars), starting TTS...[/#888]")
                 self._speak(final_text)
             self._agent_lock.release()
             self._agent_gen = None
@@ -1147,6 +1146,9 @@ class EvyApp(App[None]):
 
     BRAILLE_FRAMES = ["⠁⠀⠀⠀⠀","⠈⠁⠀⠀⠀","⠐⠈⠁⠀⠀","⠠⠐⠈⠁⠀","⡀⠠⠐⠈⠁","⣀⡀⠠⠐⠈","⣄⣀⡀⠠⠐","⣤⣄⣀⡀⠠","⣦⣤⣄⣀⡀","⣶⣦⣤⣄⣀","⣷⣶⣦⣤⣄","⣿⣷⣶⣦⣤","⣿⣿⣷⣶⣦","⣿⣿⣿⣷⣶","⣿⣿⣿⣿⣷","⣿⣿⣿⣿⣿","⠿⣿⣿⣿⣿","⠀⠿⣿⣿⣿","⠀⠀⠿⣿⣿","⠀⠀⠀⠿⣿","⠀⠀⠀⠀⠿"]
 
+    VOICE_CHUNK_FRAMES = ["⣿⡇⠀⠀","⠀⣿⡇⠀","⠀⠀⣿⡇","⠀⠀⠀⣿","⠀⠀⣿⡇","⠀⣿⡇⠀","⣿⡇⠀⠀"]
+    VOICE_PLAY_FRAMES = ["⠁⠂⠄⡀⢀⠠⠐⠈","⠂⠄⡀⢀⠠⠐⠈⠁","⠄⡀⢀⠠⠐⠈⠁⠂","⡀⢀⠠⠐⠈⠁⠂⠄","⢀⠠⠐⠈⠁⠂⠄⡀","⠠⠐⠈⠁⠂⠄⡀⢀","⠐⠈⠁⠂⠄⡀⢀⠠","⠈⠁⠂⠄⡀⢀⠠⠐"]
+
     def __init__(self) -> None:
         super().__init__()
         self._current_prompt: str = ""
@@ -1168,6 +1170,10 @@ class EvyApp(App[None]):
         self._agent_lock = threading.Lock()
         self._voice_mode: bool = False
         self._audio_process: subprocess.Popen | None = None
+        self._voice_status_timer = None
+        self._voice_status_frames: list[str] = []
+        self._voice_status_label: str = ""
+        self._voice_status_index: int = 0
 
     # ── Chat widget helpers ───────────────────────────────────────────
 
@@ -1238,6 +1244,30 @@ class EvyApp(App[None]):
         bar = self.query_one("#load-status", Static)
         bar.update("[dim]㆝[/dim]")
         self._status_label = ""
+
+    def _set_voice_status(self, label: str, frames: list[str]) -> None:
+        self._voice_status_frames = frames
+        self._voice_status_label = label
+        self._voice_status_index = 0
+        if not hasattr(self, "_voice_status_timer") or self._voice_status_timer is None:
+            self._tick_voice_status()
+            self._voice_status_timer = self.set_interval(0.12, self._tick_voice_status)
+
+    def _tick_voice_status(self) -> None:
+        bar = self.query_one("#load-status", Static)
+        frame = self._voice_status_frames[self._voice_status_index % len(self._voice_status_frames)]
+        self._voice_status_index += 1
+        bar.update(f"{frame} {self._voice_status_label}")
+
+    def _clear_voice_status(self) -> None:
+        if hasattr(self, "_voice_status_timer") and self._voice_status_timer is not None:
+            self._voice_status_timer.stop()
+            self._voice_status_timer = None
+        self._voice_status_label = ""
+        self._voice_status_frames = []
+        self._voice_status_index = 0
+        bar = self.query_one("#load-status", Static)
+        bar.update("[dim]㆝[/dim]")
 
     def _update_brain_occupation(self, char_count: int | None = None, token_count: int | None = None) -> None:
         if char_count is None or token_count is None:
@@ -1554,6 +1584,7 @@ end if
         if self._audio_process:
             self._audio_process.kill()
             self._audio_process = None
+            self._clear_voice_status()
         if not self._agent_worker or not self._agent_worker.is_running:
             return
         self._cancel_event.set()
@@ -1571,9 +1602,7 @@ end if
 
     def action_toggle_voice(self) -> None:
         self._voice_mode = not self._voice_mode
-        state = "ON" if self._voice_mode else "OFF"
         self._update_discord_header(bool(os.environ.get("discord-token")))
-        self._add_system_message(f"[bold]⽳ Voice mode {state}[/bold]")
 
     def action_toggle_thinking(self) -> None:
         self._handle_command("/think")
@@ -1613,13 +1642,13 @@ end if
     def _speak(self, text: str) -> None:
         api_key = os.environ.get("groq-api-key")
         if not api_key:
-            self.call_from_thread(self._add_system_message, "[#888]Voice: no groq-api-key in .env[/#888]")
             return
         try:
             chunks = _split_for_tts(text, max_chars=195)
-            self.call_from_thread(self._add_system_message, f"[#888]Voice: generating speech ({len(text)} chars, {len(chunks)} chunk{'s' if len(chunks) != 1 else ''})...[/#888]")
             client = Groq(api_key=api_key)
             all_audio = b""
+            if len(chunks) > 1:
+                self.call_from_thread(self._set_voice_status, "Clearing throat", self.VOICE_CHUNK_FRAMES)
             for i, chunk in enumerate(chunks):
                 response = client.audio.speech.create(
                     model="canopylabs/orpheus-v1-english",
@@ -1628,21 +1657,20 @@ end if
                     response_format="wav",
                 )
                 all_audio += response.read()
-                if len(chunks) > 1:
-                    self.call_from_thread(self._add_system_message, f"[#888]Voice: chunk {i + 1}/{len(chunks)} done[/#888]")
             tmp_path = tempfile.mktemp(suffix=".wav")
             with open(tmp_path, "wb") as f:
                 f.write(all_audio)
-            self.call_from_thread(self._add_system_message, f"[#888]Voice: playing audio ({len(all_audio)} bytes)...[/#888]")
+            self.call_from_thread(self._set_voice_status, "Speaking", self.VOICE_PLAY_FRAMES)
             self._audio_process = subprocess.Popen(["afplay", tmp_path])
             self._audio_process.wait()
             self._audio_process = None
+            self.call_from_thread(self._clear_voice_status)
             try:
                 os.unlink(tmp_path)
             except OSError:
                 pass
-        except Exception as e:
-            self.call_from_thread(self._add_system_message, f"[#888]Voice error: {e}[/#888]")
+        except Exception:
+            self.call_from_thread(self._clear_voice_status)
             self._audio_process = None
 
 
