@@ -135,6 +135,8 @@ EvyApp {
     padding: 0 1;
     background: $surface;
     border-top: thick #444;
+    overflow-y: auto;
+    max-height: 15;
 }
 #thinking-content.-visible {
     display: block;
@@ -734,7 +736,8 @@ class EvyApp(App[None]):
                     yield Static("[dim]㆝ Dreaming[/dim]", id="load-status", classes="chat-header-item")
                 with Vertical(id="chat-body"):
                     yield VerticalScroll(id="chat-messages")
-                    yield Static(id="thinking-content")
+                    with VerticalScroll(id="thinking-content"):
+                        yield Static("", id="thinking-text")
                     yield Static(WATERMARK, id="watermark")
             with Vertical(id="activity-panel"):
                 with Vertical(id="commands-section"):
@@ -1200,7 +1203,7 @@ class EvyApp(App[None]):
         if not self._thinking_buffer:
             return
         text = "".join(self._thinking_buffer)
-        self.query_one("#thinking-content", Static).update(Text(text, style="dim"))
+        self.query_one("#thinking-text", Static).update(Text(text, style="dim"))
 
     def _set_status(self, label: str) -> None:
         self._status_label = label
@@ -1255,14 +1258,14 @@ class EvyApp(App[None]):
         elif t == "thinking_chunk":
             self._set_status("Ruminating…")
             self._thinking_buffer.append(event["text"])
-            self.query_one("#thinking-content", Static).add_class("-visible")
+            self.query_one("#thinking-content", VerticalScroll).add_class("-visible")
             if not self._thinking_flush_handle:
                 self._thinking_flush_handle = self.set_interval(0.3, self._flush_thinking)
 
         elif t == "thinking_flush":
             self._flush_thinking()
             self._thinking_buffer.clear()
-            self.query_one("#thinking-content", Static).remove_class("-visible")
+            self.query_one("#thinking-content", VerticalScroll).remove_class("-visible")
             if self._thinking_flush_handle:
                 self._thinking_flush_handle.stop()
                 self._thinking_flush_handle = None
@@ -1328,7 +1331,7 @@ class EvyApp(App[None]):
         elif t == "final":
             self._flush_thinking()
             self._thinking_buffer.clear()
-            self.query_one("#thinking-content", Static).remove_class("-visible")
+            self.query_one("#thinking-content", VerticalScroll).remove_class("-visible")
             if self._thinking_flush_handle:
                 self._thinking_flush_handle.stop()
                 self._thinking_flush_handle = None
@@ -1542,7 +1545,7 @@ end if
         self._agent_worker.cancel()
         self._agent_worker = None
         self._thinking_buffer.clear()
-        self.query_one("#thinking-content", Static).remove_class("-visible")
+        self.query_one("#thinking-content", VerticalScroll).remove_class("-visible")
         if self._thinking_flush_handle:
             self._thinking_flush_handle.stop()
             self._thinking_flush_handle = None
