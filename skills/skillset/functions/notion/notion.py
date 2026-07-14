@@ -33,6 +33,7 @@ def _normalize_rich_text(value: Any) -> list:
         [{"type": "text", "text": {"content": "..."}}]
 
     Common mistakes this fixes:
+        - Bare string -> [{"type": "text", "text": {"content": "..."}}]
         - Single object wrapped in {"item": ...} -> unwrap and wrap in array
         - Single object without array wrapper -> wrap in array
         - Already correct array -> pass through
@@ -40,29 +41,103 @@ def _normalize_rich_text(value: Any) -> list:
     if isinstance(value, list):
         return value
 
+    if isinstance(value, str):
+        return [{"type": "text", "text": {"content": value}}]
+
     if isinstance(value, dict):
-        # Fix: {"item": {"text": {"content": "..."}}} -> [{"text": {"content": "..."}}]
         if "item" in value and len(value) == 1:
             inner = value["item"]
             if isinstance(inner, dict):
                 return [inner]
+            if isinstance(inner, str):
+                return [{"type": "text", "text": {"content": inner}}]
             return value
 
-        # Fix: {"text": {"content": "..."}} -> [{"text": {"content": "..."}}]
         if "text" in value or "type" in value:
             return [value]
 
     return value
 
 
+def _normalize_select_or_status(value: Any) -> dict:
+    """Normalize select/status value to {"name": "..."}."""
+    if isinstance(value, str):
+        return {"name": value}
+    if isinstance(value, dict):
+        if "item" in value and len(value) == 1:
+            inner = value["item"]
+            if isinstance(inner, dict):
+                return inner
+            return {"name": str(inner)}
+        if "name" in value:
+            return value
+    return value
+
+
+def _normalize_date(value: Any) -> dict:
+    """Normalize date value to {"start": "..."}."""
+    if isinstance(value, str):
+        return {"start": value}
+    if isinstance(value, dict):
+        if "item" in value and len(value) == 1:
+            inner = value["item"]
+            if isinstance(inner, dict):
+                return inner
+            return {"start": str(inner)}
+        if "start" in value:
+            return value
+    return value
+
+
+def _normalize_multi_select(value: Any) -> list:
+    """Normalize multi_select value to [{"name": "..."}]."""
+    if isinstance(value, list):
+        return [
+            {"name": item} if isinstance(item, str) else item
+            for item in value
+        ]
+    if isinstance(value, str):
+        return [{"name": value}]
+    if isinstance(value, dict) and "item" in value and len(value) == 1:
+        inner = value["item"]
+        if isinstance(inner, list):
+            return [
+                {"name": item} if isinstance(item, str) else item
+                for item in inner
+            ]
+    return value
+
+
+def _normalize_number(value: Any) -> Any:
+    """Coerce number strings to int/float."""
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            try:
+                return float(value)
+            except ValueError:
+                return value
+    return value
+
+
+def _normalize_checkbox(value: Any) -> bool:
+    """Coerce checkbox strings to bool."""
+    if isinstance(value, str):
+        return value.lower() in ("true", "1", "yes")
+    return bool(value)
+
+
 def _normalize_properties(properties: dict) -> dict:
     """Normalize database item properties to correct Notion API format.
 
-    Fixes common LLM mistakes:
-        - rich_text/title: single object -> array
-        - rich_text/title: {"item": {...}} -> [{...}]
-        - select/status: {"name": "X"} already correct (pass through)
-        - date: {"start": "YYYY-MM-DD"} already correct (pass through)
+    Fixes common LLM mistakes for all property types:
+        - rich_text/title: bare string, single object, {"item": ...} -> correct array
+        - select/status: bare string, {"item": ...} -> {"name": "..."}
+        - date: bare string, {"item": ...} -> {"start": "..."}
+        - multi_select: bare string, list of strings -> [{"name": "..."}]
+        - number: string -> int/float
+        - checkbox: string -> bool
     """
     ARRAY_PROPERTY_TYPES = {"rich_text", "title"}
 
@@ -78,10 +153,44 @@ def _normalize_properties(properties: dict) -> dict:
             prop_type = next(iter(type_keys))
 
             if prop_type in ARRAY_PROPERTY_TYPES:
-                # Normalize rich_text/title arrays
                 raw_value = prop_value[prop_type]
                 normalized[prop_name] = {
                     prop_type: _normalize_rich_text(raw_value)
+                }
+                continue
+
+            if prop_type in ("select", "status"):
+                raw_value = prop_value[prop_type]
+                normalized[prop_name] = {
+                    prop_type: _normalize_select_or_status(raw_value)
+                }
+                continue
+
+            if prop_type == "date":
+                raw_value = prop_value[prop_type]
+                normalized[prop_name] = {
+                    "date": _normalize_date(raw_value)
+                }
+                continue
+
+            if prop_type == "multi_select":
+                raw_value = prop_value[prop_type]
+                normalized[prop_name] = {
+                    "multi_select": _normalize_multi_select(raw_value)
+                }
+                continue
+
+            if prop_type == "number":
+                raw_value = prop_value[prop_type]
+                normalized[prop_name] = {
+                    "number": _normalize_number(raw_value)
+                }
+                continue
+
+            if prop_type == "checkbox":
+                raw_value = prop_value[prop_type]
+                normalized[prop_name] = {
+                    "checkbox": _normalize_checkbox(raw_value)
                 }
                 continue
 

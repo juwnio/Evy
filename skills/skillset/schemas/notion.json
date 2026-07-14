@@ -201,7 +201,7 @@
     "type": "function",
     "function": {
       "name": "create_notion_database_item",
-      "description": "Creates a new item (row/page) in a Notion database. The 'properties' parameter should map each property name to its value. IMPORTANT: rich_text and title MUST be ARRAYS of objects, not single objects. Example: {\"Name\": {\"title\": [{\"text\": {\"content\": \"Task 1\"}}]}, \"Notes\": {\"rich_text\": [{\"text\": {\"content\": \"Some note\"}}]}, \"Status\": {\"select\": {\"name\": \"Todo\"}}, \"Date\": {\"date\": {\"start\": \"2026-07-10\"}}}",
+      "description": "Creates a new item (row/page) in a Notion database. The 'properties' parameter should map each property name to its value. IMPORTANT: rich_text and title MUST be ARRAYS of objects, not single objects. Each property MUST be wrapped in its type key (e.g. {\"Name\": {\"title\": [...]}}). Bare top-level strings like {\"Name\": \"text\"} will NOT be auto-normalized — you must wrap in the type key. Example: {\"Name\": {\"title\": [{\"text\": {\"content\": \"Task 1\"}}]}, \"Notes\": {\"rich_text\": [{\"text\": {\"content\": \"Some note\"}}]}, \"Status\": {\"select\": {\"name\": \"Todo\"}}, \"Date\": {\"date\": {\"start\": \"2026-07-10\"}}}",
       "tag": "notion",
       "module": "skills.skillset.functions.notion.notion",
       "parameters": {
@@ -213,7 +213,7 @@
           },
           "properties": {
             "type": "object",
-            "description": "Property values for the new item. FORMAT RULES: title/rich_text = ARRAY of objects: [{\"text\": {\"content\": \"...\"}}]. select/status = {\"name\": \"Value\"}. date = {\"start\": \"YYYY-MM-DD\"}. checkbox = true/false. Example: {\"Name\": {\"title\": [{\"text\": {\"content\": \"Task 1\"}}]}, \"Notes\": {\"rich_text\": [{\"text\": {\"content\": \"My note\"}}]}, \"Status\": {\"select\": {\"name\": \"Todo\"}}, \"Due\": {\"date\": {\"start\": \"2026-07-10\"}}}"
+            "description": "Property values for the new item. FORMAT RULES: title/rich_text = ARRAY of objects: [{\"text\": {\"content\": \"...\"}}]. select/status = {\"name\": \"Value\"}. date = {\"start\": \"YYYY-MM-DD\"}. checkbox = true/false. Each property MUST be wrapped in its type key — bare strings like {\"Name\": \"text\"} are NOT auto-normalized. Example: {\"Name\": {\"title\": [{\"text\": {\"content\": \"Task 1\"}}]}, \"Notes\": {\"rich_text\": [{\"text\": {\"content\": \"My note\"}}]}, \"Status\": {\"select\": {\"name\": \"Todo\"}}, \"Due\": {\"date\": {\"start\": \"2026-07-10\"}}}"
           }
         },
         "required": ["database_id", "properties"]
@@ -224,7 +224,7 @@
     "type": "function",
     "function": {
       "name": "update_notion_database_item",
-      "description": "Updates an existing item (page/row) in a Notion database. Provide the page_id of the item and the properties to update. Only the specified properties are changed. IMPORTANT: rich_text and title MUST be ARRAYS of objects, not single objects. Example: {\"Status\": {\"select\": {\"name\": \"Done\"}}, \"Notes\": {\"rich_text\": [{\"text\": {\"content\": \"Updated note\"}}]}}",
+      "description": "Updates an existing item (page/row) in a Notion database. Provide the page_id of the item and the properties to update. Only the specified properties are changed. IMPORTANT: rich_text and title MUST be ARRAYS of objects, not single objects. Each property MUST be wrapped in its type key (e.g. {\"Status\": {\"select\": {\"name\": \"Done\"}}}). Bare top-level strings like {\"Status\": \"Done\"} will NOT be auto-normalized. Example: {\"Status\": {\"select\": {\"name\": \"Done\"}}, \"Notes\": {\"rich_text\": [{\"text\": {\"content\": \"Updated note\"}}]}}",
       "tag": "notion",
       "module": "skills.skillset.functions.notion.notion",
       "parameters": {
@@ -236,7 +236,7 @@
           },
           "properties": {
             "type": "object",
-            "description": "Property values to update. FORMAT RULES: title/rich_text = ARRAY of objects: [{\"text\": {\"content\": \"...\"}}]. select/status = {\"name\": \"Value\"}. date = {\"start\": \"YYYY-MM-DD\"}. Example: {\"Status\": {\"select\": {\"name\": \"Done\"}}, \"Notes\": {\"rich_text\": [{\"text\": {\"content\": \"Updated note\"}}]}}"
+            "description": "Property values to update. FORMAT RULES: title/rich_text = ARRAY of objects: [{\"text\": {\"content\": \"...\"}}]. select/status = {\"name\": \"Value\"}. date = {\"start\": \"YYYY-MM-DD\"}. Each property MUST be wrapped in its type key — bare strings like {\"Status\": \"Done\"} are NOT auto-normalized. Example: {\"Status\": {\"select\": {\"name\": \"Done\"}}, \"Notes\": {\"rich_text\": [{\"text\": {\"content\": \"Updated note\"}}]}}"
           }
         },
         "required": ["page_id", "properties"]
