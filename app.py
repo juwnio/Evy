@@ -38,6 +38,7 @@ from gateway import (
     call_evy_stream,
     load_config,
     load_memory,
+    _get_active_key,
 )
 from utilities.scripts.conversion import count_tokens
 from skills.primary import load_heartbeats, save_heartbeats, _heartbeats_lock, _parse_interval
@@ -736,7 +737,7 @@ class EvyApp(App[None]):
                     yield Static("┃", classes="chat-header-sep")
                     yield Static(id="evy-status", classes="chat-header-item")
                     yield Static("┃", classes="chat-header-sep")
-                    yield Static("[dim]㆝ Dreaming[/dim]", id="load-status", classes="chat-header-item")
+                    yield Static(self._key_label(), id="load-status", classes="chat-header-item")
                 with Vertical(id="chat-body"):
                     yield VerticalScroll(id="chat-messages")
                     with VerticalScroll(id="thinking-content"):
@@ -974,6 +975,7 @@ class EvyApp(App[None]):
         self._add_user_message(prompt)
         self._current_prompt = prompt
         self._cancel_event.clear()
+        self._active_key = "main"
         imgs = images or self._attached_images
         self._attached_images = []
         self._agent_gen = call_evy_stream(prompt, images=imgs, voice_mode=self._voice_mode)
@@ -1174,6 +1176,7 @@ class EvyApp(App[None]):
         self._voice_status_frames: list[str] = []
         self._voice_status_label: str = ""
         self._voice_status_index: int = 0
+        self._active_key: str = "main"
 
     # ── Chat widget helpers ───────────────────────────────────────────
 
@@ -1237,12 +1240,15 @@ class EvyApp(App[None]):
         self._status_braille_index += 1
         bar.update(f"{frame} {self._status_label}")
 
+    def _key_label(self) -> str:
+        return f"[dim]㆝ ({self._active_key})[/dim]"
+
     def _clear_status(self) -> None:
         if self._status_timer_handle:
             self._status_timer_handle.stop()
             self._status_timer_handle = None
         bar = self.query_one("#load-status", Static)
-        bar.update("[dim]㆝[/dim]")
+        bar.update(self._key_label())
         self._status_label = ""
 
     def _set_voice_status(self, label: str, frames: list[str]) -> None:
@@ -1267,7 +1273,7 @@ class EvyApp(App[None]):
         self._voice_status_frames = []
         self._voice_status_index = 0
         bar = self.query_one("#load-status", Static)
-        bar.update("[dim]㆝[/dim]")
+        bar.update(self._key_label())
 
     def _update_brain_occupation(self, char_count: int | None = None, token_count: int | None = None) -> None:
         if char_count is None or token_count is None:
@@ -1367,6 +1373,9 @@ class EvyApp(App[None]):
 
         elif t == "retry":
             self._add_system_message(f"[dim]Ollama error, retrying ({event['attempt']}/3)...[/dim]")
+
+        elif t == "cell_swap":
+            self._active_key = event["key"]
 
         elif t == "brain_update":
             self._update_brain_occupation(char_count=event["char_count"], token_count=event["token_count"])

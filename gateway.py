@@ -36,10 +36,37 @@ for _p in (BRAIN_PATH.parent, ACTIONS_LOG_PATH.parent, HEARTBEAT_LOG_PATH.parent
 _permission_handler = None  # set by TUI on startup
 _email_connections_context = ""  # set by TUI when email connections change
 _cancelled = threading.Event()  # set by TUI when user cancels mid-turn
+_active_key = "main"  # tracks which API key is in use for cell swapping
 
 
 def cancel_pending() -> None:
     _cancelled.set()
+
+
+def _get_active_key() -> str:
+    return _active_key
+
+
+def _build_client_for_key(key_name: str) -> Client:
+    config = load_config()
+    if config.get("local", True):
+        return Client(timeout=_LLM_TIMEOUT)
+    if key_name == "preconscious":
+        api_key = os.environ.get("preconscious-key", "")
+    else:
+        api_key = os.environ.get("ollama-api-key", "") or config.get("ollama-api-key", "")
+    if not api_key:
+        raise ValueError(f"No API key available for '{key_name}'")
+    return Client(
+        host="https://ollama.com",
+        headers={"Authorization": f"Bearer {api_key}"},
+        timeout=_LLM_TIMEOUT,
+    )
+
+
+def _is_rate_limited(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return "429" in msg or "rate limit" in msg or "too many requests" in msg
 
 TEMP_SCREENSHOT_DIR = Path(tempfile.gettempdir()) / "evy_screenshots"
 SCREENSHOT_MAX_AGE = 300  # 5 minutes
@@ -137,9 +164,13 @@ def call_evy_stream(prompt: str, images: list[str] | None = None, voice_mode: bo
 
     _cleanup_temp_screenshots()
 
+    global _active_key
+    _active_key = "main"
+
     config = load_config()
     try:
-        client, model = resolve_model_config(config)
+        client = _build_client_for_key(_active_key)
+        model = config.get("cloud-model", config["model"]) if not config.get("local", True) else config["model"]
     except ValueError as e:
         yield {"type": "final", "text": str(e)}
         return
@@ -301,6 +332,14 @@ def call_evy_stream(prompt: str, images: list[str] | None = None, voice_mode: bo
                 except ResponseError as e:
                     if "does not support thinking" in str(e):
                         effective_thinking = False
+                        continue
+                    if _is_rate_limited(e) and attempt < MAX_RETRIES - 1:
+                        _active_key = "preconscious" if _active_key == "main" else "main"
+                        try:
+                            client = _build_client_for_key(_active_key)
+                        except ValueError:
+                            pass
+                        yield {"type": "cell_swap", "key": _active_key}
                         continue
                     if attempt < MAX_RETRIES - 1:
                         yield {"type": "retry", "attempt": attempt + 2}
@@ -659,6 +698,31 @@ def execute_heartbeat(prompt: str) -> tuple[str, str]:
             tools=tools,
             options={"num_predict": max_output_tokens},
         )
+    except ResponseError as e:
+        if _is_rate_limited(e):
+            fallback_key = os.environ.get("ollama-api-key", "")
+            if fallback_key:
+                client = Client(
+                    host="https://ollama.com",
+                    headers={"Authorization": f"Bearer {fallback_key}"},
+                    timeout=_LLM_TIMEOUT,
+                )
+                try:
+                    response = client.chat(
+                        model=model,
+                        messages=messages,
+                        tools=tools,
+                        options={"num_predict": max_output_tokens},
+                    )
+                except Exception as e2:
+                    _log_heartbeat_entry({"prompt": prompt, "status": "fail", "error": f"Heartbeat model call failed after swap: {e2}", "tool_calls": tool_calls_made, "timestamp": datetime.now().isoformat()})
+                    return f"Heartbeat model call failed after swap: {e2}", "fail"
+            else:
+                _log_heartbeat_entry({"prompt": prompt, "status": "fail", "error": f"Heartbeat model call failed: {e}", "tool_calls": tool_calls_made, "timestamp": datetime.now().isoformat()})
+                return f"Heartbeat model call failed: {e}", "fail"
+        else:
+            _log_heartbeat_entry({"prompt": prompt, "status": "fail", "error": f"Heartbeat model call failed: {e}", "tool_calls": tool_calls_made, "timestamp": datetime.now().isoformat()})
+            return f"Heartbeat model call failed: {e}", "fail"
     except Exception as e:
         _log_heartbeat_entry({"prompt": prompt, "status": "fail", "error": f"Heartbeat model call failed: {e}", "tool_calls": tool_calls_made, "timestamp": datetime.now().isoformat()})
         return f"Heartbeat model call failed: {e}", "fail"
@@ -706,6 +770,31 @@ def execute_heartbeat(prompt: str) -> tuple[str, str]:
                 tools=tools,
                 options={"num_predict": max_output_tokens},
             )
+        except ResponseError as e:
+            if _is_rate_limited(e):
+                fallback_key = os.environ.get("ollama-api-key", "")
+                if fallback_key:
+                    client = Client(
+                        host="https://ollama.com",
+                        headers={"Authorization": f"Bearer {fallback_key}"},
+                        timeout=_LLM_TIMEOUT,
+                    )
+                    try:
+                        response = client.chat(
+                            model=model,
+                            messages=messages,
+                            tools=tools,
+                            options={"num_predict": max_output_tokens},
+                        )
+                    except Exception as e2:
+                        _log_heartbeat_entry({"prompt": prompt, "status": "fail", "error": f"Heartbeat tool loop failed after swap: {e2}", "tool_calls": tool_calls_made, "timestamp": datetime.now().isoformat()})
+                        return f"Heartbeat model call failed during tool loop after swap: {e2}", "fail"
+                else:
+                    _log_heartbeat_entry({"prompt": prompt, "status": "fail", "error": f"Heartbeat tool loop failed: {e}", "tool_calls": tool_calls_made, "timestamp": datetime.now().isoformat()})
+                    return f"Heartbeat model call failed during tool loop: {e}", "fail"
+            else:
+                _log_heartbeat_entry({"prompt": prompt, "status": "fail", "error": f"Heartbeat tool loop failed: {e}", "tool_calls": tool_calls_made, "timestamp": datetime.now().isoformat()})
+                return f"Heartbeat model call failed during tool loop: {e}", "fail"
         except Exception as e:
             _log_heartbeat_entry({"prompt": prompt, "status": "fail", "error": f"Heartbeat tool loop failed: {e}", "tool_calls": tool_calls_made, "timestamp": datetime.now().isoformat()})
             return f"Heartbeat model call failed during tool loop: {e}", "fail"
