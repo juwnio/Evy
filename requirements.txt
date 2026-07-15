@@ -1,4 +1,4 @@
-# Connection to local LLM
+# Connection to local or cloud LLM
 ollama
 
 # Character to token conversion
