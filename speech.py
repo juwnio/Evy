@@ -9,7 +9,7 @@ import threading
 import time
 from typing import Callable
 
-from Foundation import NSObject, dispatch_get_main_queue, dispatch_sync
+from Foundation import NSObject
 from Speech import (
     SFSpeechAudioBufferRecognitionRequest,
     SFSpeechRecognizer,
@@ -53,27 +53,17 @@ class SpeechRecorder(NSObject):
     def authorize(self, callback: Callable[[bool], None] | None = None):
         """Request microphone and speech recognition permissions.
 
-        The alert is dispatched to the main RunLoop so it doesn't block
-        Textual's event loop.  callback(True) on grant, callback(False)
-        on denial.
+        callback(True) on grant, callback(False) on denial.
+        If the system alert doesn't appear, the user can grant via
+        System Preferences > Privacy & Security > Microphone / Speech Recognition.
         """
         auth_callback = callback
 
-        class AuthDelegate(NSObject):
-            def speechRecognizerauthorizationHelperDidComplete(
-                self, granted: bool
-            ):
-                if auth_callback:
-                    auth_callback(granted)
+        def _auth_handler(granted: bool):
+            if auth_callback:
+                auth_callback(granted)
 
-        delegate = AuthDelegate.alloc().init()
-        queue = dispatch_get_main_queue()
-        dispatch_sync(
-            queue,
-            lambda: SFSpeechRecognizer.requestAuthorization(
-                delegate.speechRecognizerauthorizationHelperDidComplete
-            ),
-        )
+        SFSpeechRecognizer.requestAuthorization_(_auth_handler)
 
     # ── Recording ──────────────────────────────────────────────────
 
