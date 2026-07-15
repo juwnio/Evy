@@ -12,6 +12,8 @@ from pathlib import Path
 
 from rich.text import Text
 from groq import Groq
+from pynput import keyboard
+from speech import SpeechRecorder
 
 from textual.worker import Worker
 from textual import on, work
@@ -811,6 +813,22 @@ class EvyApp(App[None]):
         except Exception:
             pass
 
+        # Authorize speech recognition and start keyboard listener
+        def _speech_auth(granted: bool):
+            if not granted:
+                self.call_from_thread(
+                    self._add_system_message,
+                    "[dim]Speech recognition permission denied — Ctrl+R will not work[/dim]",
+                )
+
+        self._speech_recorder.authorize(_speech_auth)
+        self._keyboard_listener = keyboard.Listener(
+            on_press=self._on_key_press,
+            on_release=self._on_key_release,
+        )
+        self._keyboard_listener.daemon = True
+        self._keyboard_listener.start()
+
     def _update_email_header(self) -> None:
         conns = list_connections()
         count = len(conns)
@@ -1177,6 +1195,9 @@ class EvyApp(App[None]):
         self._voice_status_label: str = ""
         self._voice_status_index: int = 0
         self._active_key: str = "main"
+        self._recording: bool = False
+        self._speech_recorder = SpeechRecorder.alloc().init()
+        self._keyboard_listener: keyboard.Listener | None = None
 
     # ── Chat widget helpers ───────────────────────────────────────────
 
@@ -1582,6 +1603,11 @@ end if
         inp.clear()
 
     def action_cancel_response(self) -> None:
+        if self._recording:
+            self._recording = False
+            self._speech_recorder.stop_recording()
+            self._clear_status()
+            return
         if self._awaiting_permission:
             inp = self.query_one("#prompt-input", Input)
             inp.placeholder = "Converse with Evy…"
@@ -1612,6 +1638,43 @@ end if
     def action_toggle_voice(self) -> None:
         self._voice_mode = not self._voice_mode
         self._update_discord_header(bool(os.environ.get("discord-token")))
+
+    # ── Speech-to-text (press-and-hold Ctrl+R) ─────────────────────
+
+    def _on_key_press(self, key) -> None:
+        if self._is_ctrl_r(key) and not self._recording:
+            self.call_from_thread(self._start_recording)
+
+    def _on_key_release(self, key) -> None:
+        if self._is_ctrl_r(key) and self._recording:
+            self.call_from_thread(self._stop_recording)
+
+    @staticmethod
+    def _is_ctrl_r(key) -> bool:
+        try:
+            return key == keyboard.Key.ctrl_r
+        except AttributeError:
+            return hasattr(key, "char") and key.char == "r"
+
+    def _start_recording(self) -> None:
+        self._recording = True
+        bar = self.query_one("#load-status", Static)
+        bar.update("[bold]🎙 Recording…[/bold]")
+        self._speech_recorder.start_recording(self._on_transcription)
+
+    def _stop_recording(self) -> None:
+        self._recording = False
+        self._speech_recorder.stop_recording()
+
+    def _on_transcription(self, text: str) -> None:
+        self.call_from_thread(self._handle_transcription, text)
+
+    def _handle_transcription(self, text: str) -> None:
+        self._clear_status()
+        if text and text.strip():
+            self._submit_prompt(text.strip())
+        else:
+            self._add_system_message("[dim]Didn't catch that[/dim]")
 
     def action_toggle_thinking(self) -> None:
         self._handle_command("/think")

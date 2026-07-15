@@ -160,6 +160,7 @@ python3 app.py
 | `Ctrl+I` | Show current configuration         |
 | `Ctrl+E` | Add email connection               |
 | `Ctrl+V` | Toggle voice mode (TTS)            |
+| `Ctrl+R` | Speech-to-text (hold to record)    |
 | `Ctrl+A` | Toggle activity panel              |
 | `Ctrl+Q` | Exit                               |
 | `Ctrl+C` | Clear input                        |
@@ -177,6 +178,14 @@ In voice mode, the LLM receives a special system context that makes it reply in 
 Longer responses are automatically chunked at sentence boundaries to stay within the Groq TTS 200-character limit. A "Clearing throat" spinner shows in the header during chunk generation, and a "Speaking" spinner shows during playback. Press `Esc` to stop audio mid-playback.
 
 Requires `groq-api-key` in `.env` (get one at https://console.groq.com/keys).
+
+### Speech-to-text
+
+Press and hold `Ctrl+R` to dictate. The header shows "🎙 Recording…" while you speak. Release `Ctrl+R` to stop — your words are transcribed using macOS's native Speech framework and sent as a prompt.
+
+Press `Esc` during recording to cancel without sending.
+
+No API key required — uses Apple's on-device speech recognition. Requires `pyobjc-framework-Speech` (in `requirements.txt`).
 
 
 
