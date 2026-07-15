@@ -30,11 +30,6 @@ discord
 # Text-to-speech (voice mode)
 groq
 
-# Speech-to-text (macOS native, press-and-hold Ctrl+R)
-pyobjc-framework-Speech
-pyobjc-framework-AVFoundation
-pynput
-
 # Then run 'playwright install chromium' to install the browser.
 
 
