@@ -15,6 +15,7 @@ Evy has a personality. She's sharp, direct, and irreverent — not another bland
 - **Memory system** — conversation history, episodic facts, automatic consolidation when context fills up
 - **Permission gating** — sensitive tools ask for approval before executing
 - **Image/vision support** — attach images in the TUI or receive them from Discord
+- **Voice mode** — toggleable TTS via Groq Orpheus (Ctrl+V), speaks responses aloud with short conversational style
 
 
 
@@ -32,6 +33,7 @@ Evy has a personality. She's sharp, direct, and irreverent — not another bland
 | **Obsidian**     | Read/write/search notes in your vault           | Local REST API key         |
 | **Git/GitHub**   | Status, diff, log, branch, commit, PR           | GitHub PAT                 |
 | **Browser**      | Full web automation via Playwright Chromium     | None                       |
+| **Groq TTS**     | Text-to-speech via Orpheus (voice mode)        | API key                    |
 | **macOS**        | Clipboard, Spaces/workspaces, window management | System commands            |
 
 
@@ -99,6 +101,9 @@ tavily-api-key=
 # Obsidian Local REST API (optional)
 obsidian-host=http://127.0.0.1:27123
 obsidian-api-key=
+
+# Groq text-to-speech (https://console.groq.com/keys)
+groq-api-key=
 ```
 
 Only the keys you need must be set. Evy works with just Ollama — everything else is optional.
@@ -154,11 +159,24 @@ python3 app.py
 | `Ctrl+S` | Edit `config.json`                 |
 | `Ctrl+I` | Show current configuration         |
 | `Ctrl+E` | Add email connection               |
+| `Ctrl+V` | Toggle voice mode (TTS)            |
 | `Ctrl+A` | Toggle activity panel              |
 | `Ctrl+Q` | Exit                               |
 | `Ctrl+C` | Clear input                        |
 | `Ctrl+/` | Show help                          |
 | `Esc`    | Cancel current response            |
+
+
+
+### Voice mode
+
+Press `Ctrl+V` to toggle voice mode. When active, the header shows "Connected to Discord + ⾳ Voice Activated" and Evy's responses are spoken aloud using Groq's Orpheus TTS with the Hannah voice.
+
+In voice mode, the LLM receives a special system context that makes it reply in short, conversational sentences — no tables, no code blocks, no formatted data. Just natural spoken English.
+
+Longer responses are automatically chunked at sentence boundaries to stay within the Groq TTS 200-character limit. A "Clearing throat" spinner shows in the header during chunk generation, and a "Speaking" spinner shows during playback. Press `Esc` to stop audio mid-playback.
+
+Requires `groq-api-key` in `.env` (get one at https://console.groq.com/keys).
 
 
 
