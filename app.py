@@ -822,12 +822,18 @@ class EvyApp(App[None]):
                 )
 
         self._speech_recorder.authorize(_speech_auth)
-        self._keyboard_listener = keyboard.Listener(
-            on_press=self._on_key_press,
-            on_release=self._on_key_release,
-        )
-        self._keyboard_listener.daemon = True
-        self._keyboard_listener.start()
+        try:
+            self._keyboard_listener = keyboard.Listener(
+                on_press=self._on_key_press,
+                on_release=self._on_key_release,
+            )
+            self._keyboard_listener.daemon = True
+            self._keyboard_listener.start()
+        except Exception as e:
+            self.call_from_thread(
+                self._add_system_message,
+                f"[dim]Keyboard listener failed (Accessibility permission needed?): {e}[/dim]",
+            )
 
     def _update_email_header(self) -> None:
         conns = list_connections()
@@ -1196,6 +1202,7 @@ class EvyApp(App[None]):
         self._voice_status_index: int = 0
         self._active_key: str = "main"
         self._recording: bool = False
+        self._ctrl_held: bool = False
         self._speech_recorder = SpeechRecorder.alloc().init()
         self._keyboard_listener: keyboard.Listener | None = None
 
@@ -1642,19 +1649,20 @@ end if
     # ── Speech-to-text (press-and-hold Ctrl+R) ─────────────────────
 
     def _on_key_press(self, key) -> None:
-        if self._is_ctrl_r(key) and not self._recording:
-            self.call_from_thread(self._start_recording)
+        if key in (keyboard.Key.ctrl_l, keyboard.Key.ctrl_r):
+            self._ctrl_held = True
+        elif self._ctrl_held and hasattr(key, "char") and key.char == "r":
+            if not self._recording:
+                self.call_from_thread(self._start_recording)
 
     def _on_key_release(self, key) -> None:
-        if self._is_ctrl_r(key) and self._recording:
-            self.call_from_thread(self._stop_recording)
-
-    @staticmethod
-    def _is_ctrl_r(key) -> bool:
-        try:
-            return key == keyboard.Key.ctrl_r
-        except AttributeError:
-            return hasattr(key, "char") and key.char == "r"
+        if key in (keyboard.Key.ctrl_l, keyboard.Key.ctrl_r):
+            self._ctrl_held = False
+            if self._recording:
+                self.call_from_thread(self._stop_recording)
+        elif hasattr(key, "char") and key.char == "r":
+            if self._recording:
+                self.call_from_thread(self._stop_recording)
 
     def _start_recording(self) -> None:
         self._recording = True
