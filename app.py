@@ -831,7 +831,7 @@ class EvyApp(App[None]):
         clist.remove_children()
 
         def gap() -> None:
-            for _ in range(4):
+            for _ in range(2):
                 clist.mount(Static("", classes="command-entry"))
 
         def seg(title: str) -> None:
@@ -871,6 +871,8 @@ class EvyApp(App[None]):
         headless = config.get("browser_headless", True)
         b_status = "[bold]Head[/bold]" if not headless else "[dim]Headless[/dim]"
         entry("Toggle", "ctrl+b", b_status)
+        entry("Headless", "/headless")
+        entry("Headed", "/head")
 
         gap()
 
@@ -890,12 +892,18 @@ class EvyApp(App[None]):
         seg("Conversation")
         entry("Cancel", "esc")
         entry("Clear chat", "ctrl+c")
+        entry("Load history", "/msg-N")
+        entry("Export chat", "/export")
+        entry("Reset chat", "/reset")
 
         gap()
 
         # System
         seg("System")
         entry("Exit", "ctrl+q")
+        entry("Consolidate", "/consol")
+        entry("Help", "ctrl+/")
+        entry("Voice", "ctrl+v")
 
     # ── Permission handler (called from worker thread) ────────────────
 
