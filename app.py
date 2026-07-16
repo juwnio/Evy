@@ -509,6 +509,7 @@ class EvyCommands(Provider):
             ("/cloud", "Switch to cloud model"),
             ("/local", "Switch to local model"),
             ("/attach", "Open file picker to attach an image"),
+            ("/msg-N", "Load last N exchanges into chat"),
             ("/clear", "Clear chat log"),
             ("/export", "Export conversation to file"),
             ("/reset", "Reset brain.json and chat"),
@@ -1423,6 +1424,7 @@ class EvyApp(App[None]):
                 "[dim]    /config       Edit utilities/config.json[/dim]",
                 "[bold]Conversation[/bold]",
                 "[dim]    /cancel       Cancel current response[/dim]",
+                "[dim]    /msg-N        Load last N exchanges into chat (0=all)[/dim]",
                 "[dim]    /clear        Clear chat log[/dim]",
                 "[dim]    /export       Export conversation to file[/dim]",
                 "[dim]    /reset        Reset brain.json and chat[/dim]",
@@ -1493,6 +1495,33 @@ class EvyApp(App[None]):
             config = load_config()
             config["local"] = True
             _save_config(config)
+        elif cmd.startswith("/msg-"):
+            try:
+                n = int(cmd.split("-", 1)[1])
+            except (ValueError, IndexError):
+                self._add_system_message(f"[dim]Unknown command: {cmd}[/dim]")
+                return
+            if n < 0:
+                self._add_system_message("[dim]/msg-N: N must be 0 or a positive integer[/dim]")
+                return
+            container = self.query_one("#chat-messages", VerticalScroll)
+            if len(container.children) > 0:
+                self._add_system_message("[dim]/msg-N only works on a fresh chat[/dim]")
+                return
+            memory = load_memory(BRAIN_PATH, [])
+            exchanges = [e for e in memory if e.get("prompt") and e.get("type") != "compaction"]
+            to_load = exchanges if n == 0 else exchanges[-n:]
+            if not to_load:
+                self._add_system_message("[dim]No exchanges found in brain[/dim]")
+                return
+            watermark = self.query_one("#watermark", Static)
+            watermark.add_class("-hidden")
+            for entry in to_load:
+                self._add_user_message(entry["prompt"])
+                resp = entry.get("response")
+                if resp:
+                    self._add_evy_message(resp)
+            self._add_system_message(f"[dim]Loaded {len(to_load)} exchange(s)[/dim]")
         elif cmd == "/clear":
             self._clear_chat()
         elif cmd == "/export":
