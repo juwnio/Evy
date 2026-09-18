@@ -70,6 +70,23 @@ cd Evy
 
 On subsequent runs, it skips straight to launching.
 
+### Launch from anywhere (optional)
+
+Install a global `evy` command:
+
+```bash
+./install-cli.sh
+```
+
+This symlinks `scripts/evy` into `~/.local/bin` (override the location with
+`EVY_BIN_DIR`). If that directory isn't on your `PATH`, the script prints the
+one line to add to your shell profile. After that you can start Evy from any
+directory with:
+
+```bash
+evy
+```
+
 ### 2. Configure environment variables
 
 Copy the example and fill in your keys:
@@ -252,6 +269,9 @@ Evy/
 ├── app.py                      # TUI application (Textual)
 ├── gateway.py                  # LLM orchestration, tool execution, streaming
 ├── start.sh                    # Launch script
+├── install-cli.sh              # Install the global `evy` command
+├── scripts/
+│   └── evy                     # Launcher resolvable through symlinks
 ├── onboard.py                  # First-run setup (venv, pip, playwright)
 ├── requirements.txt            # Python dependencies
 ├── .env.example                # Environment variable template

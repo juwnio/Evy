@@ -1,0 +1,23 @@
+#!/bin/bash
+# Launch Evy from anywhere.
+#
+# This script lives in the repo and resolves its own location (including
+# through symlinks), so it works no matter where Evy was cloned. Install it
+# onto your PATH with: ./install-cli.sh
+set -e
+
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    case "$SOURCE" in
+        /*) ;;
+        *) SOURCE="$DIR/$SOURCE" ;;
+    esac
+done
+
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+REPO="$(cd -P "$SCRIPT_DIR/.." >/dev/null 2>&1 && pwd)"
+
+cd "$REPO" || { echo "Could not enter the Evy repo: $REPO" >&2; exit 1; }
+exec ./start.sh
