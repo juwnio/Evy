@@ -16,6 +16,7 @@
   --muted: #6f6f6f;
   --line: #000;
   --line-soft: #d9d9d9;
+  --bg-alpha: rgba(255, 255, 255, 0.62);
   color-scheme: light;
 }
 :root[data-theme="dark"] {
@@ -24,6 +25,7 @@
   --muted: #9a9a9a;
   --line: #fff;
   --line-soft: #2b2b2b;
+  --bg-alpha: rgba(0, 0, 0, 0.62);
   color-scheme: dark;
 }
 
@@ -37,6 +39,17 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── background helix canvas ────────────────────────────── */
+#helix-bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  display: block;
+}
+
 /* ── topbar ─────────────────────────────────────────────── */
 .topbar {
   position: sticky;
@@ -46,21 +59,25 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  background: var(--bg);
+  background: var(--bg-alpha);
   border-bottom: 1px solid var(--line);
 }
+.topbar.scrolled { border-bottom-color: transparent; }
 .topbar-left { display: flex; align-items: center; gap: 14px; }
 .topbar h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 .topbar h1 .sub { color: var(--muted); font-weight: 400; }
 .topbar-right { display: flex; align-items: center; gap: 16px; }
 
-.wrap { max-width: 860px; margin: 0 auto; padding: 20px 20px 60px; }
+.wrap { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 20px 20px 60px; }
 
 .lead { color: var(--muted); margin: 4px 0 24px; }
 
 /* ── cards ─────────────────────────────────────────────── */
 .card {
+  position: relative;
+  z-index: 1;
   border: 1px solid var(--line);
+  background: var(--bg-alpha);
   padding: 18px 20px;
   margin-bottom: 20px;
 }
@@ -223,8 +240,11 @@ table#email-table {
 .git-grid input { min-width: 0; }
 
 .foot {
+  position: relative;
+  z-index: 1;
   text-align: center;
   color: var(--muted);
   font-size: 12px;
   padding: 10px 0 30px;
+  background: var(--bg-alpha);
 }

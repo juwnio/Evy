@@ -21,7 +21,7 @@ from textual.binding import Binding
 from textual.command import Provider
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.message import Message
-from textual.screen import ModalScreen
+from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Button,
     Input,
@@ -34,6 +34,7 @@ from textual.widgets import (
 from utilities.scripts.states import TOOL_FRAMES
 from utilities.scripts.google_auth import list_connections
 from utilities.scripts.settings import masked_config, migrate_env_to_config, is_first_run, get_secret
+from utilities.scripts.helix_engine import FRAME_DELAY, advance, render as helix_render
 
 import gateway as _gateway_mod
 from gateway import (
@@ -90,6 +91,9 @@ WATERMARK = """\
 ##########**##=###########*############=*+*.**=.#+**+*=++***-*+**+*****-
 
 """
+
+# seconds the helix splash plays on each Evy launch
+SPLASH_SECONDS = 2.5
 
 # ── TCSS ──────────────────────────────────────────────────────────────────
 
@@ -410,6 +414,29 @@ EvyApp {
 #config-button-gap {
     width: 1fr;
 }
+
+/* ── Splash / helix boot animation ────────────────────────── */
+
+#splash-screen {
+    align: center middle;
+    background: #111;
+}
+
+#splash-art {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+    color: #e6e6e6;
+}
+
+#splash-sub {
+    dock: bottom;
+    width: 100%;
+    text-align: center;
+    color: #777;
+    padding-bottom: 2;
+    text-style: dim;
+}
 """
 
 # ── Modals ─────────────────────────────────────────────────────────────────
@@ -471,6 +498,60 @@ class ConfigModal(ModalScreen[bool]):
                 self.notify(f"Invalid JSON: {e}", severity="error", timeout=5)
         else:
             self.dismiss(False)
+
+
+class SplashScreen(Screen):
+    """Full-screen double-helix animation shown while Evy boots."""
+
+    def __init__(self, first_run: bool = False) -> None:
+        super().__init__()
+        self._tick_handle = None
+        self._dismiss_handle = None
+        self._phase = 0.0
+        self._first_run = first_run
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="splash-screen"):
+            yield Static("", id="splash-art")
+            yield Static(
+                "opening control panel for setup…" if self._first_run else "",
+                id="splash-sub",
+            )
+
+    def on_mount(self) -> None:
+        self._tick_handle = self.set_interval(FRAME_DELAY, self._tick)
+        self._tick()
+
+    def on_unmount(self) -> None:
+        if self._tick_handle:
+            self._tick_handle.stop()
+            self._tick_handle = None
+
+    def _tick(self) -> None:
+        art = self.query_one("#splash-art", Static)
+        width = art.size.width
+        height = art.size.height
+        if width <= 0 or height <= 0:
+            return
+
+        cells = helix_render(width, height, self._phase)
+        grid: list[list[tuple[str, str] | None]] = [[None for _ in range(width)] for _ in range(height)]
+        for cell in cells:
+            if 0 <= cell.x < width and 0 <= cell.y < height:
+                grid[cell.y][cell.x] = (cell.char, cell.layer)
+
+        styles = {"front": "[bold]", "back": "[dim]", "rung": "[dim]"}
+
+        def fmt(entry: tuple[str, str] | None) -> str:
+            if entry is None:
+                return " "
+            char, layer = entry
+            return f"{styles[layer]}{char}[/]"
+
+        rows = ["".join(fmt(entry) for entry in row) for row in grid]
+
+        art.update("\n".join(rows))
+        self._phase = advance(self._phase)
 
 
 # ── Command Palette Provider ───────────────────────────────────────────────
@@ -708,6 +789,7 @@ class EvyApp(App[None]):
     _permission_event: threading.Event | None = None
     _permission_allowed: bool = False
     _thinking_spinner_handle = None
+    _splash_screen: SplashScreen | None = None
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="main-area"):
@@ -737,16 +819,20 @@ class EvyApp(App[None]):
             yield Static("[dim]Toggle Commands[/dim] [dim]ctrl+a[/dim]", id="brain-toggle")
 
     def on_mount(self) -> None:
-        self.query_one("#prompt-input", Input).focus()
-        self._update_email_header()
-        self._update_commands()
-        self._update_brain_occupation()
-
-        # One-time migration of .env / legacy config values into config.json secrets
+        # Boot splash: play the helix while startup init runs underneath.
         try:
             migrate_env_to_config()
         except Exception:
             pass
+        first_run = is_first_run()
+        self._splash_screen = SplashScreen(first_run=first_run)
+        self.push_screen(self._splash_screen)
+        self.set_timer(SPLASH_SECONDS, self._dismiss_splash)
+
+        self.query_one("#prompt-input", Input).focus()
+        self._update_email_header()
+        self._update_commands()
+        self._update_brain_occupation()
 
         # Inject email connections into gateway context so the model sees them
         _gateway_mod._refresh_email_context()
@@ -791,6 +877,18 @@ class EvyApp(App[None]):
                     cwd=os.path.dirname(os.path.abspath(__file__)),
                     capture_output=True,
                 )
+        except Exception:
+            pass
+
+    def _dismiss_splash(self) -> None:
+        try:
+            if self._splash_screen and self.screen is self._splash_screen:
+                self.pop_screen()
+        except Exception:
+            pass
+        self._splash_screen = None
+        try:
+            self.query_one("#prompt-input", Input).focus()
         except Exception:
             pass
 

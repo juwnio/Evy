@@ -210,6 +210,15 @@ $("migrate").addEventListener("click", async () => {
   }
 });
 
+// ── topbar border on scroll ──────────────────────────────────────────────
+(function topbarScroll() {
+  const topbar = document.querySelector(".topbar");
+  if (!topbar) return;
+  const update = () => topbar.classList.toggle("scrolled", window.scrollY > 4);
+  window.addEventListener("scroll", update, { passive: true });
+  update();
+})();
+
 (async function boot() {
   try {
     const saved = localStorage.getItem("evy-theme");
@@ -223,4 +232,88 @@ $("migrate").addEventListener("click", async () => {
     updateStatus("Failed to load config: " + err.message, false);
   }
   loadEmails();
+})();
+
+// ── background helix ─────────────────────────────────────────────────────
+// Mirrors utilities/scripts/helix_engine.py so both hosts share one look.
+(function helixBackground() {
+  const canvas = $("helix-bg");
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext("2d");
+
+  const STRAND_CHAR = "✱";
+  const RUNG_CHAR = ":";
+  const AMPLITUDE_SCALE = 0.35;
+  const WAVELENGTH = 3.0;
+  const SPEED = 0.05;
+  const RUNG_EVERY = 2;
+  const FONT = "14px 'Geist Mono', ui-monospace, monospace";
+  const CHAR_H = 14;
+
+  let phase = 0;
+  const dpr = window.devicePixelRatio || 1;
+
+  function resize() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  function fgColor() {
+    return getComputedStyle(document.documentElement).getPropertyValue("--fg").trim() || "#000";
+  }
+
+  function draw() {
+    const w = canvas.width / dpr;
+    const h = canvas.height / dpr;
+    ctx.clearRect(0, 0, w, h);
+    ctx.font = FONT;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const color = fgColor();
+    const charW = ctx.measureText(STRAND_CHAR).width || 9;
+    const cy = h / 2;
+    const radius = Math.min(h * AMPLITUDE_SCALE, h * 0.20);
+    const length = Math.floor((w * 0.7) / charW);
+    const startX = (w - length * charW) / 2;
+
+    for (let u = 0; u < length; u++) {
+      const theta = u / WAVELENGTH + phase;
+      const y1 = cy + Math.sin(theta) * radius;
+      const y2 = cy + Math.sin(theta + Math.PI) * radius;
+      const depth1 = Math.cos(theta);
+      const depth2 = Math.cos(theta + Math.PI);
+      const px = startX + u * charW + charW / 2;
+
+      ctx.fillStyle = color;
+
+      // Back strand first, then front — matches the engine's draw order.
+      const order = [[depth1, y1], [depth2, y2]].sort((a, b) => a[0] - b[0]);
+      for (const [depth, y] of order) {
+        ctx.globalAlpha = depth >= 0 ? 0.34 : 0.16;
+        ctx.fillText(STRAND_CHAR, px, y);
+      }
+
+      if (u % RUNG_EVERY === 0 && Math.abs(y1 - y2) > 1.2 * CHAR_H) {
+        ctx.globalAlpha = 0.20;
+        const top = Math.min(y1, y2);
+        const bottom = Math.max(y1, y2);
+        for (let ry = top + CHAR_H / 2; ry < bottom; ry += CHAR_H) {
+          ctx.fillText(RUNG_CHAR, px, ry);
+        }
+      }
+    }
+
+    ctx.globalAlpha = 1;
+    phase += SPEED;
+    requestAnimationFrame(draw);
+  }
+  draw();
 })();
