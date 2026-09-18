@@ -1,0 +1,258 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "memorise",
+      "description": "Stores a fact or piece of information you want to remember during conversations and or action output you want to remember for further action taking.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "fact": {
+            "type": "string",
+            "description": "The fact or information you want to remember."
+          }
+        },
+        "required": ["fact"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "reconsolidation",
+      "description": "Updates an existing memorised fact in place. Use this when a fact changes (e.g. user's age, job, location, preferences) instead of adding a conflicting entry. Finds the fact by exact match on the current text and replaces it.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "current_fact": {
+            "type": "string",
+            "description": "The exact text of the existing fact to update."
+          },
+          "updated_fact": {
+            "type": "string",
+            "description": "The new text to replace it with."
+          }
+        },
+        "required": ["current_fact", "updated_fact"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "search_skills",
+      "description": "Searches all available skill schemas for tools matching a given tag and returns their names and descriptions. Call this FIRST before load_skills to discover what tools are available.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "description": "The tag to search for (e.g., 'notion', 'memory', 'github')."
+          }
+        },
+        "required": ["tag"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "load_skills",
+      "description": "Loads full tool schemas by name so they become callable. Resets previously loaded tools. Must be preceded by search_skills — only the names returned by search_skills can be loaded. Load ALL tools for a task in a single call.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tool names to load."
+          }
+        },
+        "required": ["names"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "workspace_list",
+      "description": "Lists macOS desktops (Spaces) and windows within them. Calls list_desktops to see all Spaces, list_desktop_windows with a specific index to see its windows, or list_all_windows to see windows on every Space grouped by desktop.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["desktops", "desktop_windows", "all_windows"],
+            "description": "'desktops' — list all desktops by number. 'desktop_windows' — list windows on a specific desktop (requires desktop_index). 'all_windows' — list windows across all desktops grouped by desktop."
+          },
+          "desktop_index": {
+            "type": "integer",
+            "description": "The desktop (Space) number to query. Required when type is 'desktop_windows'. Numbers start at 1."
+          }
+        },
+        "required": ["type"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "clipboard_read",
+      "description": "Reads the current content from the macOS system clipboard (pasteboard) using pbpaste. Returns text content. If the clipboard contains non-text data (images, files), reports the byte size. Returns an explicit message if the clipboard is empty.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "clipboard_write",
+      "description": "Writes text to the macOS system clipboard (pasteboard) using pbcopy. Overwrites whatever is currently on the clipboard.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "The text content to copy to the clipboard."
+          }
+        },
+        "required": ["text"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "grep",
+      "description": "Searches file contents for a regex pattern and returns matching lines with file paths and line numbers. Tries ripgrep (rg) first — much faster for large codebases — and falls back to Python's re module if rg is not installed.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "description": "Regex pattern to search for (e.g. 'def \\w+', 'TODO', 'error.*timeout'). Supports all Python re syntax."
+          },
+          "root": {
+            "type": "string",
+            "description": "Root directory to search from (defaults to home_dir in config.json). Must be inside home_dir."
+          },
+          "glob": {
+            "type": "string",
+            "description": "File glob pattern to filter which files are searched (e.g. '**/*.py', '**/*.md', '**/*.{js,ts}'). Defaults to common text-file extensions only."
+          },
+          "max_matches": {
+            "type": "integer",
+            "description": "Maximum number of matching lines to return (default 50). Prevents overwhelming the context window."
+          },
+          "context_lines": {
+            "type": "integer",
+            "description": "Number of surrounding lines to include before and after each match for context (default 0)."
+          },
+          "case_sensitive": {
+            "type": "boolean",
+            "description": "Whether to match case sensitively (default true). Set to false for case-insensitive search."
+          }
+        },
+        "required": ["pattern"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "heartbeats_schedule",
+      "description": "Schedules a future autonomous action ('heartbeat') for Evy. Use this for tasks that need checking on later — e.g. checking email responses after sending a message, monitoring for updates, following up on something at a specific time. When the time comes, the heartbeat prompt will be sent to the model autonomously, shown in the chat as a heartbeat response. To make the heartbeat repeat, set the 'repeat' parameter.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The prompt to send to Evy when the heartbeat fires. Describes what Evy should do (e.g. 'Check email for replies to the message I sent earlier')."
+          },
+          "time": {
+            "type": "string",
+            "description": "When to run the heartbeat. Accepts ISO datetime (e.g. '2026-07-01T14:30:00') or relative time (e.g. 'in 5 minutes', 'in 2 hours', 'in 1 day')."
+          },
+          "repeat": {
+            "type": "string",
+            "description": "Optional. If set, the heartbeat reschedules itself after each successful execution. Accepts 'daily', 'hourly', or 'every X minutes/hours/days' (e.g. 'every 30 minutes', 'every 2 hours', 'every 3 days'). Omit for one-shot."
+          }
+        },
+        "required": ["name", "time"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "heartbeats_cancel",
+      "description": "Cancels a previously scheduled heartbeat by its ID or name. The heartbeat(s) will not run.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The ID of the heartbeat to cancel (returned by heartbeats_schedule). Takes precedence over name if both are given."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional. If provided (without id), cancels ALL pending heartbeats with this name. Useful for stopping repeating heartbeats."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "heartbeats_list",
+      "description": "Lists scheduled heartbeats, optionally filtered by status and/or time range. Useful to check what heartbeats are pending, what has already run, or what failed.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Filter by status: 'pending' (not yet run), 'in-operation' (currently running), 'success' (completed successfully), 'fail' (failed). If omitted, all statuses are returned.",
+            "enum": ["pending", "in-operation", "success", "fail"]
+          },
+          "from_time": {
+            "type": "string",
+            "description": "Start of time range (ISO datetime). Only heartbeats scheduled at or after this time are returned."
+          },
+          "to_time": {
+            "type": "string",
+            "description": "End of time range (ISO datetime). Only heartbeats scheduled at or before this time are returned."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "discord_send",
+      "description": "Sends a message to a Discord channel. Use this to proactively send updates, alerts, or information to Discord without being prompted by a Discord message. You need the channel ID \u2014 ask the user for it if you don't know it.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "description": "The Discord channel ID to send to (a numeric snowflake, e.g. '123456789012345678')."
+          },
+          "message": {
+            "type": "string",
+            "description": "The message content to send."
+          }
+        },
+        "required": ["channel_id", "message"]
+      }
+    }
+  }
+]

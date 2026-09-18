@@ -1,0 +1,144 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "search_email",
+      "description": "Search emails in your inbox. Filters can be combined (AND). Returns email items with email_id, from, to, cc, subject, date, is_read, is_starred, folder, attachments. Does NOT return body — use get_email_body for that.",
+      "tag": "email_inbox",
+      "module": "skills.skillset.functions.email.inbox",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Search term matching against both subject and body (full-text). Omit to return all emails matching the where filters."
+          },
+          "where": {
+            "type": "object",
+            "description": "Filter conditions — all optional and AND-combined.",
+            "properties": {
+              "from_": {
+                "type": "string",
+                "description": "Sender email address to filter by."
+              },
+              "starred": {
+                "type": "boolean",
+                "description": "True for starred only, false for unstarred, omit for both."
+              },
+              "is_unread": {
+                "type": "boolean",
+                "description": "True for unread only, false for read only, omit for both."
+              },
+              "sent_before": {
+                "type": "string",
+                "description": "ISO date (e.g. '2026-01-01'). Filters emails sent before this date."
+              },
+              "sent_after": {
+                "type": "string",
+                "description": "ISO date (e.g. '2026-01-01'). Filters emails sent after this date."
+              },
+              "subject_contains": {
+                "type": "string",
+                "description": "Case-insensitive substring match on subject."
+              }
+            }
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Sort field. Prefix '-' for descending (e.g. '-date' for newest first). Defaults to '-date'."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max results (1-100). Defaults to 20.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "connection_id": {
+            "type": "string",
+            "description": "The ID of the email connection to search (e.g. 'eml_abc123'). Omit if only one connection is configured."
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_email_body",
+      "description": "Fetch the full plain-text body of a specific email by its email_id.",
+      "tag": "email_inbox",
+      "module": "skills.skillset.functions.email.inbox",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "email_id": {
+            "type": "string",
+            "description": "The email_id from search_email."
+          },
+          "connection_id": {
+            "type": "string",
+            "description": "The ID of the email connection this email belongs to (e.g. 'eml_abc123'). Omit if only one connection is configured."
+          }
+        },
+        "required": ["email_id"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "forward_email",
+      "description": "Forward an existing email to a new recipient. The original message is quoted in the forwarded email.",
+      "tag": "email_inbox",
+      "module": "skills.skillset.functions.email.inbox",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "email_id": {
+            "type": "string",
+            "description": "The email_id to forward."
+          },
+          "to": {
+            "type": "string",
+            "description": "Recipient email address."
+          },
+          "body": {
+            "type": "string",
+            "description": "Optional additional message to prepend above the forwarded content."
+          },
+          "connection_id": {
+            "type": "string",
+            "description": "The ID of the email connection this email belongs to (e.g. 'eml_abc123'). Omit if only one connection is configured."
+          }
+        },
+        "required": ["email_id", "to"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "trash_email",
+      "description": "Move one or more emails to the Gmail Trash folder. Accepts a list of email_ids from search_email. Returns a short summary of what was trashed vs what failed.",
+      "tag": "email_inbox",
+      "module": "skills.skillset.functions.email.inbox",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "email_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of email_ids returned from search_email."
+          },
+          "connection_id": {
+            "type": "string",
+            "description": "The ID of the email connection these emails belong to (e.g. 'eml_abc123'). Omit if only one connection is configured."
+          }
+        },
+        "required": ["email_ids"]
+      }
+    }
+  }
+]

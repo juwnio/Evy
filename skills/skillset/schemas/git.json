@@ -1,0 +1,206 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "git_status",
+      "description": "Shows the working tree status — staged, unstaged, and untracked changes, plus the current branch name.",
+      "tag": "git",
+      "module": "skills.skillset.functions.git.git",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Directory to search for a Git repo (defaults to home_dir). Auto-detects by walking up from this path looking for .git."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "git_diff",
+      "description": "Shows the diff of unstaged changes. Set staged=true to show the diff of staged (index) changes instead.",
+      "tag": "git",
+      "module": "skills.skillset.functions.git.git",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Directory to search for a Git repo (defaults to home_dir)."
+          },
+          "staged": {
+            "type": "boolean",
+            "description": "Show staged diff (git diff --staged) instead of unstaged diff."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "git_log",
+      "description": "Shows recent commit history. Optionally filter to a specific file path.",
+      "tag": "git",
+      "module": "skills.skillset.functions.git.git",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Directory to search for a Git repo (defaults to home_dir)."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of commits to show (default 10)."
+          },
+          "file": {
+            "type": "string",
+            "description": "Optional file path to filter history to a specific file."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "git_branch",
+      "description": "Lists local branches. Set all=true to include remote-tracking branches.",
+      "tag": "git",
+      "module": "skills.skillset.functions.git.git",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Directory to search for a Git repo (defaults to home_dir)."
+          },
+          "all": {
+            "type": "boolean",
+            "description": "Include remote branches (git branch -a)."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "git_pull",
+      "description": "Fetches and merges changes from the remote repository.",
+      "tag": "git",
+      "module": "skills.skillset.functions.git.git",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Directory to search for a Git repo (defaults to home_dir)."
+          },
+          "remote": {
+            "type": "string",
+            "description": "Remote name (defaults to 'origin')."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch to pull (defaults to current branch)."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "git_checkout",
+      "description": "Switches to an existing branch. Use create=true to create a new branch first.",
+      "tag": "git",
+      "module": "skills.skillset.functions.git.git",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Directory to search for a Git repo (defaults to home_dir)."
+          },
+          "branch": {
+            "type": "string",
+            "description": "The branch name to switch to or create."
+          },
+          "create": {
+            "type": "boolean",
+            "description": "Create the branch first (git checkout -b)."
+          }
+        },
+        "required": ["branch"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "git_commit",
+      "description": "Stages all changes and creates a commit. Permission-gated — the user will be prompted to approve.",
+      "tag": "git",
+      "module": "skills.skillset.functions.git.git",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Directory to search for a Git repo (defaults to home_dir)."
+          },
+          "message": {
+            "type": "string",
+            "description": "The commit message."
+          }
+        },
+        "required": ["message"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "git_create_pr",
+      "description": "Pushes the current branch to origin and creates a pull request on GitHub. The PR will be visible for you to review and merge.",
+      "tag": "git",
+      "module": "skills.skillset.functions.git.git",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Directory to search for a Git repo (defaults to home_dir)."
+          },
+          "title": {
+            "type": "string",
+            "description": "The PR title."
+          },
+          "body": {
+            "type": "string",
+            "description": "The PR description/body."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch to create the PR from (defaults to current branch)."
+          },
+          "base": {
+            "type": "string",
+            "description": "Base branch to merge into (default 'main')."
+          }
+        },
+        "required": ["title"]
+      }
+    }
+  }
+]

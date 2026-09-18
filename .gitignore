@@ -1,0 +1,14 @@
+.env
+.venv/
+brain.json
+credentials.json
+__pycache__/
+credentials/emails.json
+episodic-memory.json
+chores.txt
+actions-log.json
+brain.json.broken
+.DS_Store
+heartbeats.json
+heartbeat-log.json
+hunter_quota.json

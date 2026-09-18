@@ -1,0 +1,84 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "tavily_search",
+      "description": "Searches the web using the Tavily API, which returns AI-optimised search results with relevancy scores, content snippets, and optional LLM-generated answers, raw content, and images. Supports news, finance, and general search with time/domain/country filters. Use this instead of browser navigation when you need quick, structured answers from the web.",
+      "tag": "tavily",
+      "module": "skills.skillset.functions.tavily.tavily",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The search query to execute."
+          },
+          "search_depth": {
+            "type": "string",
+            "enum": ["basic", "advanced", "fast", "ultra-fast"],
+            "description": "Controls latency vs. relevance. 'basic' (default, 1 credit): balanced option. 'advanced' (2 credits): highest relevance with multi-snippet results. 'fast' (1 credit): prioritizes lower latency. 'ultra-fast' (1 credit): minimizes latency above all else."
+          },
+          "max_results": {
+            "type": "integer",
+            "description": "Maximum number of search results to return (1-20). Defaults to 5."
+          },
+          "topic": {
+            "type": "string",
+            "enum": ["general", "news", "finance"],
+            "description": "Search category. 'general' for broad search, 'news' for real-time updates (politics, sports, current events), 'finance' for financial content."
+          },
+          "time_range": {
+            "type": "string",
+            "enum": ["day", "week", "month", "year"],
+            "description": "Filter results by publish/update date relative to now."
+          },
+          "start_date": {
+            "type": "string",
+            "description": "Return results published/updated on or after this date. Format: YYYY-MM-DD."
+          },
+          "end_date": {
+            "type": "string",
+            "description": "Return results published/updated on or before this date. Format: YYYY-MM-DD."
+          },
+          "include_answer": {
+            "type": "string",
+            "enum": ["basic", "advanced"],
+            "description": "Include an LLM-generated answer to the query. 'basic' for a quick answer, 'advanced' for a more detailed answer."
+          },
+          "include_raw_content": {
+            "type": "string",
+            "enum": ["markdown", "text"],
+            "description": "Include cleaned page content per result. 'markdown' returns search result content in markdown format, 'text' returns plain text."
+          },
+          "include_images": {
+            "type": "boolean",
+            "description": "Include images in the response (both query-level images and per-result images from each source)."
+          },
+          "include_domains": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of domains to specifically include in search results (max 300). Only results from these domains will be returned."
+          },
+          "exclude_domains": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of domains to exclude from search results (max 150)."
+          },
+          "country": {
+            "type": "string",
+            "description": "Boost search results from a specific country (e.g. 'united states', 'united kingdom', 'japan', 'australia', 'germany'). Only available when topic is 'general'."
+          },
+          "auto_parameters": {
+            "type": "boolean",
+            "description": "When enabled, Tavily automatically configures search parameters based on your query's content and intent. Explicit values override automatic ones. Note: search_depth may be upgraded to 'advanced', costing 2 credits."
+          },
+          "exact_match": {
+            "type": "boolean",
+            "description": "Only return results containing the exact quoted phrase(s) in the query, bypassing synonyms or semantic variations. Wrap target phrases in quotes within the query (e.g. \"John Smith\" CEO Acme Corp)."
+          }
+        },
+        "required": ["query"]
+      }
+    }
+  }
+]
