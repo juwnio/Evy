@@ -226,10 +226,6 @@ EvyApp {
     layout: vertical;
 }
 
-#activity-panel.-visible {
-    display: block;
-}
-
 #commands-section {
     height: 1fr;
     overflow-y: scroll;
@@ -328,11 +324,6 @@ EvyApp {
     width: 1fr;
     text-align: center;
     color: $accent;
-}
-
-#brain-toggle {
-    width: auto;
-    color: $evy-dim;
 }
 
 #chat-header {
@@ -514,7 +505,7 @@ class SplashScreen(Screen):
         with Vertical(id="splash-screen"):
             yield Static("", id="splash-art")
             yield Static(
-                "opening control panel for setup…" if self._first_run else "",
+                "Finish Configuring at Ground Control to use Evy" if self._first_run else "",
                 id="splash-sub",
             )
 
@@ -779,8 +770,6 @@ class EvyApp(App[None]):
         Binding("ctrl+i", "show_state", "State"),
         Binding("ctrl+q", "quit", "Exit"),
         Binding("ctrl+c", "clear_input", "Clear", priority=True),
-        Binding("ctrl+a", "toggle_activity", "Activity", priority=True),
-        Binding("cmd+a", "toggle_activity", "Activity"),
         Binding("ctrl+v", "toggle_voice", "Voice", priority=True),
         Binding("ctrl+slash", "show_help", "Help"),
     ]
@@ -790,6 +779,7 @@ class EvyApp(App[None]):
     _permission_allowed: bool = False
     _thinking_spinner_handle = None
     _splash_screen: SplashScreen | None = None
+    _setup_poll = None
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="main-area"):
@@ -816,7 +806,6 @@ class EvyApp(App[None]):
         with Horizontal(id="brain-occupation"):
             yield Static("[bold]Cancel[/bold] [dim]esc[/dim]", id="brain-cancel")
             yield Static(id="brain-label")
-            yield Static("[dim]Toggle Commands[/dim] [dim]ctrl+a[/dim]", id="brain-toggle")
 
     def on_mount(self) -> None:
         # Boot splash: play the helix while startup init runs underneath.
@@ -827,7 +816,11 @@ class EvyApp(App[None]):
         first_run = is_first_run()
         self._splash_screen = SplashScreen(first_run=first_run)
         self.push_screen(self._splash_screen)
-        self.set_timer(SPLASH_SECONDS, self._dismiss_splash)
+        if first_run:
+            # Hold the helix on screen until setup is completed at Ground Control.
+            self._setup_poll = self.set_interval(2.0, self._check_setup_complete)
+        else:
+            self.set_timer(SPLASH_SECONDS, self._dismiss_splash)
 
         self.query_one("#prompt-input", Input).focus()
         self._update_email_header()
@@ -863,7 +856,7 @@ class EvyApp(App[None]):
 
         # Configure Evy's git identity in this repo
         try:
-            cfg = json.load(open("utilities/config.json"))
+            cfg = load_config()
             name = cfg.get("git_user_name")
             email = cfg.get("git_user_email")
             if name and email:
@@ -880,7 +873,22 @@ class EvyApp(App[None]):
         except Exception:
             pass
 
+    def _check_setup_complete(self) -> None:
+        """Dismiss the first-run helix once Ground Control saves the config."""
+        try:
+            if is_first_run():
+                return
+        except Exception:
+            return
+        if self._setup_poll:
+            self._setup_poll.stop()
+            self._setup_poll = None
+        self._dismiss_splash()
+
     def _dismiss_splash(self) -> None:
+        if self._setup_poll:
+            self._setup_poll.stop()
+            self._setup_poll = None
         try:
             if self._splash_screen and self.screen is self._splash_screen:
                 self.pop_screen()
@@ -906,7 +914,7 @@ class EvyApp(App[None]):
             return
         if is_first_run():
             try:
-                webbrowser.open(f"http://localhost:{port}")
+                webbrowser.open(f"http://127.0.0.1:{port}")
             except Exception:
                 pass
 
@@ -1689,10 +1697,10 @@ end if
             except Exception:
                 port = 8765
             try:
-                webbrowser.open(f"http://localhost:{port}")
-                self._add_system_message(f"[dim]Opened control panel at http://localhost:{port}[/dim]")
+                webbrowser.open(f"http://127.0.0.1:{port}")
+                self._add_system_message(f"[dim]Opened control panel at http://127.0.0.1:{port}[/dim]")
             except Exception:
-                self._add_system_message("[dim]Could not open a browser — visit http://localhost:8765 manually[/dim]")
+                self._add_system_message("[dim]Could not open a browser — visit http://127.0.0.1:8765 manually[/dim]")
             return
         elif cmd == "/consol":
             self.run_consolidation()
@@ -1775,13 +1783,6 @@ end if
     def action_edit_config(self) -> None:
         self.push_screen(ConfigModal())
 
-    def action_toggle_activity(self) -> None:
-        panel = self.query_one("#activity-panel")
-        if panel.has_class("-visible"):
-            panel.remove_class("-visible")
-        else:
-            panel.add_class("-visible")
-
     def action_show_help(self) -> None:
         self._handle_command("/?")
 
@@ -1849,8 +1850,7 @@ def _split_for_tts(text: str, max_chars: int = 195) -> list[str]:
 
 
 def _load_config():
-    with open("utilities/config.json", "r") as f:
-        return json.load(f)
+    return load_config()
 
 
 def _save_config(config: dict):

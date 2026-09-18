@@ -30,10 +30,68 @@ SECRET_DEFAULTS = {
     "github-token": "",
 }
 
+# Non-secret defaults used when config.json is missing, empty or unreadable so
+# a first run can still boot straight into the control panel.
+CONFIG_DEFAULTS = {
+    "home_dir": str(Path.home() / "Documents"),
+    "model": "llama3.2:latest",
+    "cloud-model": "gemma4:31b-cloud",
+    "local": True,
+    "context_window": 500000,
+    "limits_pct": {
+        "static": 18.75,
+        "conversation": 37.5,
+        "episodic": 12.5,
+        "output": 6.25,
+    },
+    "preserve_count": 5,
+    "max_tools_per_load": 10,
+    "browser_headless": False,
+    "thinking": True,
+    "stream_thinking": True,
+    "git_user_name": "",
+    "git_user_email": "",
+    "preconscious-model": "",
+    "control_panel_port": 8765,
+    "setup_complete": False,
+}
+
+
+def _read_raw_config() -> dict | None:
+    """Read config.json verbatim.
+
+    Returns the parsed dict, or ``None`` when the file is missing, empty,
+    unreadable or not a JSON object.
+    """
+    try:
+        raw = CONFIG_PATH.read_text(encoding="utf-8").strip()
+    except (FileNotFoundError, OSError):
+        return None
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
 
 def load_config() -> dict:
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+    """Return config.json merged over defaults.
+
+    Missing, empty or corrupt files fall back to defaults so Evy and the setup
+    panel can still start on a clean install.
+    """
+    config = json.loads(json.dumps(CONFIG_DEFAULTS))
+    raw = _read_raw_config() or {}
+    config.update(raw)
+    secrets = config.get("secrets")
+    if not isinstance(secrets, dict):
+        secrets = {}
+    merged_secrets = dict(SECRET_DEFAULTS)
+    merged_secrets.update(secrets)
+    config["secrets"] = merged_secrets
+    return config
 
 
 def save_config(config: dict) -> None:
@@ -99,9 +157,8 @@ def masked_config() -> dict:
 
 def is_first_run() -> bool:
     """True until the user has completed setup via the control panel."""
-    try:
-        config = load_config()
-    except (FileNotFoundError, json.JSONDecodeError):
+    config = _read_raw_config()
+    if config is None:
         return True
     if config.get("setup_complete"):
         return False
@@ -118,14 +175,10 @@ def migrate_env_to_config() -> dict:
     """
     from dotenv import load_dotenv
 
-    if not CONFIG_PATH.exists():
+    config = _read_raw_config()
+    if config is None:
         return {}
     load_dotenv(dotenv_path=ROOT / ".env")
-
-    try:
-        config = load_config()
-    except (json.JSONDecodeError, OSError):
-        return {}
 
     secrets = config.setdefault("secrets", {})
     changed = False

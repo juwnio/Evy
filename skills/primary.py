@@ -251,8 +251,9 @@ def search_skills(tag: str, schemas_dir: str = "skills/skillset/schemas") -> lis
 
 
 def load_skills(names: list[str]) -> list[dict]:
-    with open("utilities/config.json", "r") as f:
-        config = json.load(f)
+    from utilities.scripts.settings import load_config
+
+    config = load_config()
     limit = config.get("max_tools_per_load", 5)
 
     schemas_dir = Path("skills/skillset/schemas")

@@ -6,7 +6,7 @@ import httpx
 from dotenv import load_dotenv
 from ollama import Client
 
-from utilities.scripts.settings import get_secret
+from utilities.scripts.settings import get_secret, load_config
 
 load_dotenv()
 
@@ -51,8 +51,7 @@ def load_skills_context():
     with open("memory/static/skills-context.json", "r") as f:
         raw = f.read()
 
-    with open("utilities/config.json", "r") as f:
-        config = json.load(f)
+    config = load_config()
 
     raw = raw.replace("{max_tools_per_load}", str(config.get("max_tools_per_load", 5)))
 
@@ -76,10 +75,8 @@ def load_episodic_consolidation_context():
     return "\n".join(_fmt(k, v) for k, v in consolidation_context.items())
 
 
-# Load configuration from config.json
-def load_config():
-    with open("utilities/config.json", "r") as f:
-        return json.load(f)
+# Load configuration from config.json (delegates to settings; safe on a clean install)
+# `load_config` is imported from utilities.scripts.settings above.
 
 
 def load_memory(path, default):

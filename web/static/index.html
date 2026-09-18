@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Evy — Control Panel</title>
+  <title>Ground Control</title>
+  <link rel="icon" href="/static/Evy.ico" type="image/x-icon">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -11,11 +12,20 @@
 
   <header class="topbar">
     <div class="topbar-left">
-      <h1>Evy <span class="sub">control panel</span></h1>
-      <div class="theme-switch">
-        <span class="side light">light</span>
-        <input type="checkbox" id="theme" class="switch" role="switch">
-        <span class="side dark">dark</span>
+      <div class="brand">
+        <pre class="ascii-logo" role="img" aria-label="Evy">
+####################
+####*#=#+###########
+###**=%#%::-:=+#####
+###:#%%%%###=::##++#
+###%%#+=###+#####++#
+####%#:-::+*#%######
+####%**--+*%###*%###
+######::==::#*##*%**
+###%#=**+=+:-=+##***
+###*::###=-==:-*####
+####-%##%#%**+####=*</pre>
+        <span class="brand-sub">control panel</span>
       </div>
     </div>
     <div class="topbar-right">
@@ -25,13 +35,16 @@
   </header>
 
   <main class="wrap">
-    <p class="lead">
+    <p class="lead" id="intro">
       Initial configuration lives here — not in the terminal. Changes apply live
       while Evy is running. Only the Discord token needs an Evy restart to reconnect.
     </p>
 
-    <!-- ── LLM ─────────────────────────────────────────────── -->
-    <section class="card">
+    <div class="wizard-bar"><span id="step-progress"></span></div>
+
+    <!-- ── Step 1 · LLM ────────────────────────────────────── -->
+    <section class="card step active" data-step="llm" data-title="LLM / Model"
+             data-comment="First things first — this is her brain. Local keeps it private; cloud makes her sharper. Pick your poison.">
       <h2>LLM / Model</h2>
 
       <div class="field">
@@ -41,7 +54,7 @@
           <input type="checkbox" id="mode" class="switch" role="switch">
           <span class="side cloud">Cloud</span>
         </div>
-        <p class="hint" id="mode-hint">Local uses http://localhost:11434. Cloud needs the Ollama API key.</p>
+        <p class="hint" id="mode-hint">Local uses http://127.0.0.1:11434. Cloud needs an Ollama API key (required above either way).</p>
       </div>
 
       <div class="grid">
@@ -60,7 +73,7 @@
         <div class="field">
           <label for="ollama-api-key">Ollama API key</label>
           <div class="secret-row">
-            <input id="ollama-api-key" type="password" placeholder="(optional in local mode)">
+            <input id="ollama-api-key" type="password" placeholder="Required — get one at ollama.com">
             <button type="button" class="btn eye" data-eye="ollama-api-key">view</button>
           </div>
         </div>
@@ -72,10 +85,16 @@
           </div>
         </div>
       </div>
+
+      <div class="step-nav">
+        <button type="button" class="btn back" data-nav="back">← Back</button>
+        <button type="button" class="btn next" data-nav="next">Next →</button>
+      </div>
     </section>
 
-    <!-- ── Integrations ────────────────────────────────────── -->
-    <section class="card">
+    <!-- ── Step 2 · Integrations ───────────────────────────── -->
+    <section class="card step" data-step="integrations" data-title="Integrations"
+             data-comment="Ah yes, so many keys to get through - but each one allows Evy to sink her fingers into networks.">
       <h2>Integrations</h2>
       <div class="grid">
         <div class="field">
@@ -129,10 +148,16 @@
           </div>
         </div>
       </div>
+
+      <div class="step-nav">
+        <button type="button" class="btn back" data-nav="back">← Back</button>
+        <button type="button" class="btn next" data-nav="next">Next →</button>
+      </div>
     </section>
 
-    <!-- ── Email connections ───────────────────────────────── -->
-    <section class="card">
+    <!-- ── Step 3 · Email ──────────────────────────────────── -->
+    <section class="card step" data-step="email" data-title="Email connections"
+             data-comment="Give her a mailbox and she won't let an important thread slip.">
       <h2>Email connections</h2>
 
       <table id="email-table">
@@ -159,10 +184,16 @@
         Create an app password at
         <code>myaccount.google.com/apppasswords</code> and paste it above.
       </p>
+
+      <div class="step-nav">
+        <button type="button" class="btn back" data-nav="back">← Back</button>
+        <button type="button" class="btn next" data-nav="next">Next →</button>
+      </div>
     </section>
 
-    <!-- ── Preferences ─────────────────────────────────────── -->
-    <section class="card">
+    <!-- ── Step 4 · Preferences ────────────────────────────── -->
+    <section class="card step" data-step="preferences" data-title="Preferences"
+             data-comment="Boundaries and behaviour — how much room she gets and how she should think.">
       <h2>Preferences</h2>
 
       <div class="grid">
@@ -194,10 +225,10 @@
         </div>
 
         <div class="field">
-          <label>Git identity</label>
+          <label>Git identity (optional)</label>
           <div class="git-grid">
-            <input id="git-user-name" type="text" placeholder="git user name">
-            <input id="git-user-email" type="email" placeholder="git user email">
+            <input id="git-user-name" type="text" placeholder="Your name (git author)">
+            <input id="git-user-email" type="email" placeholder="you@example.com">
           </div>
         </div>
       </div>
@@ -207,18 +238,30 @@
         <label class="check"><input id="thinking" type="checkbox" class="switch"><span>Thinking (reasoning tokens)</span></label>
         <label class="check"><input id="stream-thinking" type="checkbox" class="switch"><span>Stream thinking to UI</span></label>
       </div>
+
+      <div class="step-nav">
+        <button type="button" class="btn back" data-nav="back">← Back</button>
+        <button type="button" class="btn next" data-nav="next">Next →</button>
+      </div>
     </section>
 
-    <!-- ── Finish ──────────────────────────────────────────── -->
-    <section class="card finish">
+    <!-- ── Step 5 · Finish ─────────────────────────────────── -->
+    <section class="card step finish" data-step="finish" data-title="Finish"
+             data-comment="Almost there. Flip the switch and she's officially yours.">
+      <h2>Finish</h2>
+
       <label class="check big">
         <input id="setup-complete" type="checkbox" class="switch">
         <span>Setup complete — don't auto-open this panel again</span>
       </label>
+
       <div class="finish-actions">
-        <button id="save-all-2" class="btn btn-primary">Save changes</button>
-        <button id="save-finish" class="btn btn-ghost">Save &amp; finish setup</button>
         <button id="migrate" class="btn btn-ghost">Re-run .env migration</button>
+      </div>
+
+      <div class="step-nav">
+        <button type="button" class="btn back" data-nav="back">← Back</button>
+        <button type="button" class="btn next" data-nav="finish">Save &amp; finish setup</button>
       </div>
     </section>
   </main>
@@ -226,6 +269,49 @@
   <footer class="foot">
     Served locally by Evy · secrets stay on this machine in <code>utilities/config.json</code>
   </footer>
+
+  <!-- ── Cube helper ───────────────────────────────────────── -->
+  <div class="cube-dock">
+    <div class="cube-bubble" id="cubeBubble"></div>
+    <div class="cube-tooltip" id="cubeTooltip">Got a question? Click me</div>
+    <div class="cube-bob">
+      <div class="scene">
+        <div class="cube" id="cube">
+          <div class="face front">
+            <div class="eye left" id="eyeLeft"><div class="pupil" id="pupilLeft"></div></div>
+            <div class="eye right" id="eyeRight"><div class="pupil" id="pupilRight"></div></div>
+          </div>
+          <div class="face back"></div>
+          <div class="face right"></div>
+          <div class="face left"></div>
+          <div class="face top"></div>
+          <div class="face bottom"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Q&A modal ─────────────────────────────────────────── -->
+  <div class="qa-modal" id="qaModal" role="dialog" aria-label="Got a question?" aria-hidden="true">
+    <button class="qa-close" id="qaClose" aria-label="Close">&times;</button>
+    <div class="qa-header">
+      <h2>Got a question?</h2>
+    </div>
+    <p class="qa-intro">Ask about this step, or anything about Evy.</p>
+    <div class="qa-thread" id="qaThread"></div>
+    <textarea id="qaInput" placeholder="Type your question here..."></textarea>
+    <div class="qa-actions">
+      <span class="qa-note" id="qaNote"></span>
+      <button class="qa-ask" id="qaAsk">Ask</button>
+    </div>
+  </div>
+
+  <!-- ── Theme toggle (docked bottom-left) ─────────────────── -->
+  <div class="theme-switch theme-dock" role="group" aria-label="Theme">
+    <span class="side light">light</span>
+    <input type="checkbox" id="theme" class="switch" role="switch">
+    <span class="side dark">dark</span>
+  </div>
 
   <script src="/static/app.js"></script>
 </body>
