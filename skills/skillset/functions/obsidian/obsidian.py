@@ -1,14 +1,13 @@
 import json
-import os
 
 import requests
-from dotenv import load_dotenv
+
+from utilities.scripts.settings import get_secret
 
 
 def _load_obsidian_config():
-    load_dotenv()
-    host = os.getenv("obsidian-host", "http://127.0.0.1:27123")
-    api_key = os.getenv("obsidian-api-key", "")
+    host = get_secret("obsidian-host", "http://127.0.0.1:27123")
+    api_key = get_secret("obsidian-api-key", "")
     return host, api_key
 
 

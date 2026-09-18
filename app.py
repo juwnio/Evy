@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import threading
 import uuid
+import webbrowser
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,7 +32,8 @@ from textual.widgets import (
 )
 
 from utilities.scripts.states import TOOL_FRAMES
-from utilities.scripts.google_auth import list_connections, add_connection
+from utilities.scripts.google_auth import list_connections
+from utilities.scripts.settings import masked_config, migrate_env_to_config, is_first_run, get_secret
 
 import gateway as _gateway_mod
 from gateway import (
@@ -414,13 +416,18 @@ EvyApp {
 
 class StateModal(ModalScreen[None]):
     def compose(self) -> ComposeResult:
-        config = load_config()
+        config = masked_config()
         lines = []
         for key, value in config.items():
-            if key == "ollama-api-key":
-                display = f"{value[:8]}..." if value else "(not set)"
-                lines.append(f"  {key}: {display}")
-            elif isinstance(value, bool):
+            if key == "secrets":
+                lines.append("  secrets:")
+                for skey, svalue in (value or {}).items():
+                    display = svalue if svalue else "(not set)"
+                    lines.append(f"    {skey}: {display}")
+                continue
+            if key == "setup_complete":
+                continue
+            if isinstance(value, bool):
                 status = "yes" if value else "no"
                 lines.append(f"  {key}: {status}")
             else:
@@ -466,34 +473,6 @@ class ConfigModal(ModalScreen[bool]):
             self.dismiss(False)
 
 
-class AddEmailModal(ModalScreen[dict | None]):
-    BINDINGS = [Binding("escape", "dismiss", "Cancel")]
-
-    def compose(self) -> ComposeResult:
-        with Vertical(id="state-modal"):
-            with Vertical(id="state-dialog"):
-                yield Label("[bold]ⓘ  Add Email Connection[/bold]")
-                yield Input(placeholder="Email address", id="email-input")
-                yield Input(placeholder="App Password (from Gmail)", id="password-input", password=True)
-                yield Input(placeholder="Description (e.g. 'Contacting leads')", id="desc-input")
-                with Horizontal(id="config-buttons"):
-                    yield Button("Save", variant="primary", id="email-save")
-                    yield Static(id="config-button-gap")
-                    yield Button("Cancel", variant="default", id="email-cancel")
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "email-save":
-            email = self.query_one("#email-input", Input).value.strip()
-            password = self.query_one("#password-input", Input).value.strip()
-            desc = self.query_one("#desc-input", Input).value.strip()
-            if not email or not password or not desc:
-                self.notify("All fields are required", severity="error", timeout=3)
-                return
-            self.dismiss({"email": email, "app_password": password, "description": desc})
-        else:
-            self.dismiss(None)
-
-
 # ── Command Palette Provider ───────────────────────────────────────────────
 
 class EvyCommands(Provider):
@@ -503,6 +482,7 @@ class EvyCommands(Provider):
             ("/cancel", "Cancel current response"),
             ("/browser", "Toggle browser head/headless"),
             ("/config", "Edit utilities/config.json"),
+            ("/setup", "Open the control panel in your browser"),
             ("/state", "Show current configuration"),
             ("/headless", "Set browser to headless mode"),
             ("/head", "Set browser to headed mode"),
@@ -720,7 +700,6 @@ class EvyApp(App[None]):
         Binding("ctrl+c", "clear_input", "Clear", priority=True),
         Binding("ctrl+a", "toggle_activity", "Activity", priority=True),
         Binding("cmd+a", "toggle_activity", "Activity"),
-        Binding("ctrl+e", "add_email_connection", "Email", priority=True),
         Binding("ctrl+v", "toggle_voice", "Voice", priority=True),
         Binding("ctrl+slash", "show_help", "Help"),
     ]
@@ -763,23 +742,26 @@ class EvyApp(App[None]):
         self._update_commands()
         self._update_brain_occupation()
 
+        # One-time migration of .env / legacy config values into config.json secrets
+        try:
+            migrate_env_to_config()
+        except Exception:
+            pass
+
         # Inject email connections into gateway context so the model sees them
-        conns = list_connections()
-        if conns:
-            lines = ["Available email connections:"]
-            for c in conns:
-                lines.append(f"  id={c['id']} email={c['email']} description=\"{c['description']}\"")
-            lines.append("Pass connection_id when calling email tools. Omit if only one connection exists.")
-            _gateway_mod._email_connections_context = "\n".join(lines)
+        _gateway_mod._refresh_email_context()
 
         # Wire permission handler for TUI
         _gateway_mod._permission_handler = self._tui_permission_handler
+
+        # Start the local control panel; open it in the browser on first run
+        self._start_control_panel()
 
         # Start heartbeat scheduler
         self._start_heartbeat_scheduler()
 
         # Start Discord bot daemon thread
-        discord_token = os.environ.get("discord-token")
+        discord_token = get_secret("discord-token") or ""
         if discord_token:
             from skills.discord_bot import DiscordBot
 
@@ -811,6 +793,24 @@ class EvyApp(App[None]):
                 )
         except Exception:
             pass
+
+    def _start_control_panel(self) -> None:
+        try:
+            config = _load_config()
+            port = int(config.get("control_panel_port", 8765))
+        except Exception:
+            port = 8765
+        try:
+            from web.server import start_server_thread
+
+            start_server_thread(port=port)
+        except Exception:
+            return
+        if is_first_run():
+            try:
+                webbrowser.open(f"http://localhost:{port}")
+            except Exception:
+                pass
 
     def _update_email_header(self) -> None:
         conns = list_connections()
@@ -861,7 +861,7 @@ class EvyApp(App[None]):
         seg("Email")
         conns = list_connections()
         entry(f"Connections ({len(conns)})", "")
-        entry("Add connection", "ctrl+e")
+        entry("Manage connections", "/setup")
         entry("List connections", "/emails")
 
         gap()
@@ -884,7 +884,8 @@ class EvyApp(App[None]):
 
         # Config
         seg("Config")
-        entry("Edit config", "ctrl+s")
+        entry("Control panel", "/setup")
+        entry("Edit config JSON", "ctrl+s")
 
         gap()
 
@@ -1429,6 +1430,7 @@ class EvyApp(App[None]):
                 "[bold]Vision[/bold]",
                 "[dim]    /attach       Open file picker to attach an image[/dim]",
                 "[bold]Config[/bold]",
+                "[dim]    /setup        Open the control panel in your browser[/dim]",
                 "[dim]    /config       Edit utilities/config.json[/dim]",
                 "[bold]Conversation[/bold]",
                 "[dim]    /cancel       Cancel current response[/dim]",
@@ -1441,7 +1443,7 @@ class EvyApp(App[None]):
                 "[dim]    /consol       Manually consolidate brain and episodic memory[/dim]",
                 "[bold]Email[/bold]",
                 "[dim]    /emails       List configured email connections[/dim]",
-                "[dim]    ctrl+e        Add a new email connection[/dim]",
+                "[dim]    /setup        Add or remove connections in the control panel[/dim]",
             ]
             for line in lines:
                 self._add_system_message(line)
@@ -1460,13 +1462,17 @@ class EvyApp(App[None]):
                 config["stream_thinking"] = True
             _save_config(config)
         elif cmd == "/state":
-            config = load_config()
+            config = masked_config()
             self._add_system_message("[bold]ⓘ  Configuration[/bold]")
             for key, value in config.items():
-                if key == "ollama-api-key":
-                    display = f"{value[:8]}..." if value else "(not set)"
-                    self._add_system_message(f"  [dim]{key}:[/dim] {display}")
-                elif isinstance(value, bool):
+                if key == "secrets":
+                    for skey, svalue in (value or {}).items():
+                        display = svalue if svalue else "(not set)"
+                        self._add_system_message(f"  [dim]secrets.{skey}:[/dim] {display}")
+                    continue
+                if key == "setup_complete":
+                    continue
+                if isinstance(value, bool):
                     self._add_system_message(f"  [dim]{key}:[/dim] {'[bold]yes[/bold]' if value else '[dim]no[/dim]'}")
                 else:
                     self._add_system_message(f"  [dim]{key}:[/dim] {value}")
@@ -1578,13 +1584,25 @@ end if
         elif cmd == "/config":
             self.action_edit_config()
             return
+        elif cmd == "/setup":
+            try:
+                config = _load_config()
+                port = int(config.get("control_panel_port", 8765))
+            except Exception:
+                port = 8765
+            try:
+                webbrowser.open(f"http://localhost:{port}")
+                self._add_system_message(f"[dim]Opened control panel at http://localhost:{port}[/dim]")
+            except Exception:
+                self._add_system_message("[dim]Could not open a browser — visit http://localhost:8765 manually[/dim]")
+            return
         elif cmd == "/consol":
             self.run_consolidation()
             return
         elif cmd == "/emails":
             conns = list_connections()
             if not conns:
-                self._add_system_message("[dim]No email connections configured. Use [bold]ctrl+e[/bold] to add one.[/dim]")
+                self._add_system_message("[dim]No email connections configured. Add them with [bold]/setup[/bold] (control panel).[/dim]")
                 return
             self._add_system_message("[bold]Configured Email Connections:[/bold]")
             for c in conns:
@@ -1648,7 +1666,7 @@ end if
 
     def action_toggle_voice(self) -> None:
         self._voice_mode = not self._voice_mode
-        self._update_discord_header(bool(os.environ.get("discord-token")))
+        self._update_discord_header(bool(get_secret("discord-token") or ""))
 
     def action_toggle_thinking(self) -> None:
         self._handle_command("/think")
@@ -1669,24 +1687,8 @@ end if
     def action_show_help(self) -> None:
         self._handle_command("/?")
 
-    def action_add_email_connection(self) -> None:
-        self.action_cancel_response()
-        def on_result(result: dict | None) -> None:
-            if result:
-                conn = add_connection(result["email"], result["app_password"], result["description"])
-                self._update_email_header()
-                self._add_system_message(f"[bold]\u2713[/bold] Email connection added: [dim]{conn['id']}[/dim] ({conn['email']} — {conn['description']})")
-                # Refresh gateway context
-                conns = list_connections()
-                lines = ["Available email connections:"]
-                for c in conns:
-                    lines.append(f"  id={c['id']} email={c['email']} description=\"{c['description']}\"")
-                lines.append("Pass connection_id when calling email tools. Omit if only one connection exists.")
-                _gateway_mod._email_connections_context = "\n".join(lines)
-        self.push_screen(AddEmailModal(), on_result)
-
     def _speak(self, text: str) -> None:
-        api_key = os.environ.get("groq-api-key")
+        api_key = get_secret("groq-api-key") or ""
         if not api_key:
             return
         try:

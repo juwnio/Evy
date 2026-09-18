@@ -1,8 +1,6 @@
-import os
-import json
-
 import requests
-from dotenv import load_dotenv
+
+from utilities.scripts.settings import get_secret
 
 TAVILY_API_URL = "https://api.tavily.com/search"
 TAVILY_API_KEY_ENV = "tavily-api-key"
@@ -10,12 +8,12 @@ DEFAULT_MAX_RESULTS = 5
 
 
 def _load_api_key() -> str:
-    load_dotenv()
-    key = os.getenv(TAVILY_API_KEY_ENV)
+    key = get_secret(TAVILY_API_KEY_ENV)
     if not key:
         return (
             "Tavily API key not configured. "
-            "Add tavily-api-key to your .env file "
+            "Configure it in the control panel or "
+            "add tavily-api-key to your .env file "
             "(get one at https://app.tavily.com)."
         )
     return key

@@ -21,6 +21,7 @@ from utilities.scripts.manipulation import (
     load_system_context,
     resolve_model_config,
 )
+from utilities.scripts.settings import get_secret
 
 
 SKILLS_DIR = Path("skills")
@@ -47,14 +48,33 @@ def _get_active_key() -> str:
     return _active_key
 
 
+def _refresh_email_context() -> None:
+    """Rebuild the email-connections snippet injected into the model context."""
+    global _email_connections_context
+    try:
+        from utilities.scripts.google_auth import list_connections as _lc
+        conns = _lc()
+    except Exception:
+        _email_connections_context = ""
+        return
+    if conns:
+        lines = ["Available email connections:"]
+        for c in conns:
+            lines.append(f"  id={c['id']} email={c['email']} description=\"{c['description']}\"")
+        lines.append("Pass connection_id when calling email tools. Omit if only one connection exists.")
+        _email_connections_context = "\n".join(lines)
+    else:
+        _email_connections_context = ""
+
+
 def _build_client_for_key(key_name: str) -> Client:
     config = load_config()
     if config.get("local", True):
         return Client(timeout=_LLM_TIMEOUT)
     if key_name == "preconscious":
-        api_key = os.environ.get("preconscious-key", "")
+        api_key = get_secret("preconscious-key", "")
     else:
-        api_key = os.environ.get("ollama-api-key", "") or config.get("ollama-api-key", "")
+        api_key = get_secret("ollama-api-key", "")
     if not api_key:
         raise ValueError(f"No API key available for '{key_name}'")
     return Client(
@@ -641,7 +661,7 @@ def execute_heartbeat(prompt: str) -> tuple[str, str]:
     Returns (final_text, status) where status is 'success' or 'fail'.
     """
     config = load_config()
-    api_key = os.environ.get("preconscious-key")
+    api_key = get_secret("preconscious-key")
     if not api_key:
         return "preconscious-key not found in environment", "fail"
     try:
@@ -700,7 +720,7 @@ def execute_heartbeat(prompt: str) -> tuple[str, str]:
         )
     except ResponseError as e:
         if _is_rate_limited(e):
-            fallback_key = os.environ.get("ollama-api-key", "")
+            fallback_key = get_secret("ollama-api-key", "")
             if fallback_key:
                 client = Client(
                     host="https://ollama.com",
@@ -772,7 +792,7 @@ def execute_heartbeat(prompt: str) -> tuple[str, str]:
             )
         except ResponseError as e:
             if _is_rate_limited(e):
-                fallback_key = os.environ.get("ollama-api-key", "")
+                fallback_key = get_secret("ollama-api-key", "")
                 if fallback_key:
                     client = Client(
                         host="https://ollama.com",

@@ -5,7 +5,6 @@ import tempfile
 import stat
 import urllib.request
 import urllib.error
-from dotenv import load_dotenv
 
 
 def _get_home() -> str:
@@ -91,8 +90,8 @@ def _current_branch(path: str | None = None) -> str | None:
 
 
 def _get_token() -> str | None:
-    load_dotenv()
-    return os.environ.get("github-token") or None
+    from utilities.scripts.settings import get_secret
+    return get_secret("github-token") or None
 
 
 def _get_remote_url(repo: str, remote: str = "origin") -> str | None:

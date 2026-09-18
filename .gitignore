@@ -1,4 +1,5 @@
 .env
+utilities/config.json
 .venv/
 brain.json
 credentials.json

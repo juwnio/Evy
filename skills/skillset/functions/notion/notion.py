@@ -1,27 +1,17 @@
-import os
 import re
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from dotenv import load_dotenv
 from notion_client import Client
 
+from utilities.scripts.settings import get_secret
 
-def load_notion_token(
-    env_key: str = "notion-key", dotenv_path: Optional[Path] = None
-) -> str:
-    if dotenv_path is None:
-        dotenv_path = Path(__file__).parent / ".env"
-        if not dotenv_path.exists():
-            dotenv_path = None
 
-    load_dotenv(dotenv_path=dotenv_path)
-
-    token = os.getenv(env_key)
+def load_notion_token(env_key: str = "notion-key") -> str:
+    token = get_secret(env_key)
     if not token:
         raise RuntimeError(
-            f"Notion token not found. Make sure your .env file contains a line like:\n"
-            f"{env_key}=secret_your_token_here\n"
+            f"Notion token not found. Configure {env_key} in the control panel, "
+            f"or add a line like {env_key}=secret_your_token_here to your .env file.\n"
         )
     return token
 
@@ -556,7 +546,7 @@ def create_notion_page(
     if token is None:
         token = load_notion_token()
 
-    parent_id = parent_page_id or os.getenv("notion-default-page-id")
+    parent_id = parent_page_id or get_secret("notion-default-page-id")
     if not parent_id:
         return (
             "No parent page specified. Call create_notion_page with a "

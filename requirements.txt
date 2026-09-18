@@ -30,6 +30,9 @@ discord
 # Text-to-speech (voice mode)
 groq
 
+# Control panel (web config page)
+flask
+
 # Then run 'playwright install chromium' to install the browser.
 
 

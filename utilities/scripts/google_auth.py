@@ -59,6 +59,16 @@ def list_connections() -> list[dict]:
     ]
 
 
+def delete_connection(email_id: str) -> dict | None:
+    conns = _load_connections()
+    for i, conn in enumerate(conns):
+        if conn["id"] == email_id:
+            removed = conns.pop(i)
+            _save_connections(conns)
+            return removed
+    return None
+
+
 def get_connection(connection_id: str | None = None) -> tuple[dict | None, str | None]:
     conns = _load_connections()
     if not conns:

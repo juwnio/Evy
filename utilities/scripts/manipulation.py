@@ -6,6 +6,8 @@ import httpx
 from dotenv import load_dotenv
 from ollama import Client
 
+from utilities.scripts.settings import get_secret
+
 load_dotenv()
 
 
@@ -102,7 +104,7 @@ _LLM_TIMEOUT = httpx.Timeout(300.0, connect=30.0)
 def resolve_model_config(config):
     if config.get("local", True):
         return Client(timeout=_LLM_TIMEOUT), config["model"]
-    api_key = os.environ.get("ollama-api-key") or config.get("ollama-api-key", "")
+    api_key = get_secret("ollama-api-key") or ""
     if not api_key:
         raise ValueError(
             "Cloud model selected but no API key found. "

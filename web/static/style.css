@@ -1,0 +1,230 @@
+/* Geist (sans) + Geist Mono (mono) from jsDelivr, with local fallbacks if offline */
+@font-face {
+  font-family: "Geist";
+  src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Variable.woff2") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Variable.woff2") format("woff2");
+  font-display: swap;
+}
+
+:root {
+  --bg: #fff;
+  --fg: #000;
+  --muted: #6f6f6f;
+  --line: #000;
+  --line-soft: #d9d9d9;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #000;
+  --fg: #fff;
+  --muted: #9a9a9a;
+  --line: #fff;
+  --line-soft: #2b2b2b;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.55 "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── topbar ─────────────────────────────────────────────── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 14px; }
+.topbar h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+.topbar h1 .sub { color: var(--muted); font-weight: 400; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+
+.wrap { max-width: 860px; margin: 0 auto; padding: 20px 20px 60px; }
+
+.lead { color: var(--muted); margin: 4px 0 24px; }
+
+/* ── cards ─────────────────────────────────────────────── */
+.card {
+  border: 1px solid var(--line);
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+.card h2 {
+  margin: 0 0 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px 18px;
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.field > label { font-size: 12px; color: var(--muted); }
+
+/* minimal underline inputs */
+input[type="text"], input[type="password"], input[type="email"], input[type="number"] {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--fg);
+  padding: 6px 2px;
+  font: 13px/1.4 "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  outline: none;
+  width: 100%;
+}
+input:focus { border-bottom-width: 2px; }
+
+/* ── toggle switches (checkbox styled as switch) ────────── */
+input.switch {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 36px;
+  height: 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  vertical-align: middle;
+  margin: 0;
+  flex: none;
+  transition: background 0.12s ease;
+}
+input.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  background: var(--fg);
+  border-radius: 50%;
+  transition: left 0.12s ease, background 0.12s ease;
+}
+input.switch:checked {
+  background: var(--fg);
+}
+input.switch:checked::after {
+  left: 19px;
+  background: var(--bg);
+}
+
+/* theme + mode side labels */
+.theme-switch, .mode-switch { display: inline-flex; align-items: center; gap: 10px; }
+.theme-switch .side, .mode-switch .side {
+  font-size: 12px;
+  color: var(--muted);
+  transition: color 0.12s ease, font-weight 0.12s ease;
+}
+.theme-switch:has(#theme:checked) .side.dark,
+.mode-switch:has(#mode:checked) .side.cloud { color: var(--fg); font-weight: 600; }
+.theme-switch:has(#theme:not(:checked)) .side.light,
+.mode-switch:has(#mode:not(:checked)) .side.local { color: var(--fg); font-weight: 600; }
+
+/* secret field with eye toggle */
+.secret-row { display: flex; align-items: center; gap: 8px; }
+.secret-row input { flex: 1; min-width: 0; }
+.secret-row .eye { flex: 0 0 auto; font-size: 12px; }
+
+/* boolean options row */
+.checks { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 16px; }
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* ── text-only buttons ──────────────────────────────────── */
+.btn {
+  background: none;
+  border: none;
+  box-shadow: none;
+  color: var(--fg);
+  padding: 3px 0;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+  transition: text-decoration-color 0.12s ease;
+}
+.btn:hover, .btn:focus-visible { text-decoration-color: var(--fg); }
+.btn:disabled { color: var(--muted); text-decoration-color: transparent; cursor: default; }
+
+.btn-primary { font-weight: 600; text-decoration-color: var(--line); }
+.btn-primary:hover, .btn-primary:focus-visible { text-decoration-color: var(--fg); }
+
+.inline-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.inline-form > * { flex: 1; min-width: 150px; }
+.inline-form .btn { flex: 0 0 auto; }
+
+/* ── email table ────────────────────────────────────────── */
+table#email-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+#email-table th {
+  text-align: left;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 2px;
+  border-bottom: 1px solid var(--line);
+}
+#email-table td { padding: 6px 2px; border-bottom: 1px solid var(--line-soft); }
+.muted { color: var(--muted); }
+
+/* ── finish section ─────────────────────────────────────── */
+.finish { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+.check.big { font-size: 14px; }
+.finish-actions { display: flex; gap: 18px; }
+
+/* status line */
+.save-status { font-size: 12px; color: var(--muted); }
+.save-status.ok { color: var(--fg); font-weight: 600; }
+.save-status.err { color: var(--fg); font-weight: 600; text-decoration: underline; }
+
+.hint { color: var(--muted); font-size: 12px; margin: 10px 2px 0; }
+.hint code, .foot code { font-family: "Geist Mono", ui-monospace, Menlo, monospace; }
+
+/* pct grid */
+.pct-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.pct { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.git-grid { display: flex; gap: 12px; }
+.git-grid input { min-width: 0; }
+
+.foot {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 10px 0 30px;
+}

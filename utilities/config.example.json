@@ -3,7 +3,6 @@
   "model": "llama3.2:1b",
   "cloud-model": "gemma4:31b-cloud",
   "local": false,
-  "ollama-api-key": "",
   "context_window": 500000,
   "limits_pct": {
     "static": 18.75,
@@ -17,5 +16,20 @@
   "thinking": true,
   "stream_thinking": true,
   "git_user_name": "eveagnt-byte",
-  "git_user_email": "eve.agnt@gmail.com"
+  "git_user_email": "eve.agnt@gmail.com",
+  "preconscious-model": "",
+  "control_panel_port": 8765,
+  "setup_complete": false,
+  "secrets": {
+    "ollama-api-key": "",
+    "preconscious-key": "",
+    "discord-token": "",
+    "notion-key": "",
+    "notion-default-page-id": "",
+    "tavily-api-key": "",
+    "obsidian-host": "http://127.0.0.1:27123",
+    "obsidian-api-key": "",
+    "groq-api-key": "",
+    "github-token": ""
+  }
 }

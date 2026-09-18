@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evy — Control Panel</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1>Evy <span class="sub">control panel</span></h1>
+      <div class="theme-switch">
+        <span class="side light">light</span>
+        <input type="checkbox" id="theme" class="switch" role="switch">
+        <span class="side dark">dark</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="save-status" class="save-status"></span>
+      <button id="save-all" class="btn btn-primary">Save changes</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="lead">
+      Initial configuration lives here — not in the terminal. Changes apply live
+      while Evy is running. Only the Discord token needs an Evy restart to reconnect.
+    </p>
+
+    <!-- ── LLM ─────────────────────────────────────────────── -->
+    <section class="card">
+      <h2>LLM / Model</h2>
+
+      <div class="field">
+        <label>Mode</label>
+        <div class="mode-switch">
+          <span class="side local">Local</span>
+          <input type="checkbox" id="mode" class="switch" role="switch">
+          <span class="side cloud">Cloud</span>
+        </div>
+        <p class="hint" id="mode-hint">Local uses http://localhost:11434. Cloud needs the Ollama API key.</p>
+      </div>
+
+      <div class="grid">
+        <div class="field">
+          <label for="local-model">Local model</label>
+          <input id="local-model" type="text" placeholder="llama3.2:latest">
+        </div>
+        <div class="field">
+          <label for="cloud-model">Cloud model</label>
+          <input id="cloud-model" type="text" placeholder="minimax-m3:cloud">
+        </div>
+        <div class="field">
+          <label for="preconscious-model">Preconscious model (heartbeats)</label>
+          <input id="preconscious-model" type="text" placeholder="(optional — defaults to cloud model)">
+        </div>
+        <div class="field">
+          <label for="ollama-api-key">Ollama API key</label>
+          <div class="secret-row">
+            <input id="ollama-api-key" type="password" placeholder="(optional in local mode)">
+            <button type="button" class="btn eye" data-eye="ollama-api-key">view</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="preconscious-key">Preconscious key</label>
+          <div class="secret-row">
+            <input id="preconscious-key" type="password" placeholder="Separate key for heartbeats">
+            <button type="button" class="btn eye" data-eye="preconscious-key">view</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Integrations ────────────────────────────────────── -->
+    <section class="card">
+      <h2>Integrations</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="discord-token">Discord bot token</label>
+          <div class="secret-row">
+            <input id="discord-token" type="password" placeholder="https://discord.com/developers/applications">
+            <button type="button" class="btn eye" data-eye="discord-token">view</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="notion-key">Notion integration token</label>
+          <div class="secret-row">
+            <input id="notion-key" type="password" placeholder="ntn_...">
+            <button type="button" class="btn eye" data-eye="notion-key">view</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="notion-default-page-id">Notion default page ID</label>
+          <input id="notion-default-page-id" type="text" placeholder="Parent page for new pages">
+        </div>
+        <div class="field">
+          <label for="tavily-api-key">Tavily API key</label>
+          <div class="secret-row">
+            <input id="tavily-api-key" type="password" placeholder="tvly-...">
+            <button type="button" class="btn eye" data-eye="tavily-api-key">view</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="obsidian-host">Obsidian host</label>
+          <input id="obsidian-host" type="text" placeholder="http://127.0.0.1:27123">
+        </div>
+        <div class="field">
+          <label for="obsidian-api-key">Obsidian API key</label>
+          <div class="secret-row">
+            <input id="obsidian-api-key" type="password" placeholder="Local REST API key">
+            <button type="button" class="btn eye" data-eye="obsidian-api-key">view</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="github-token">GitHub token</label>
+          <div class="secret-row">
+            <input id="github-token" type="password" placeholder="For git_create_pr">
+            <button type="button" class="btn eye" data-eye="github-token">view</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="groq-api-key">Groq API key (voice)</label>
+          <div class="secret-row">
+            <input id="groq-api-key" type="password" placeholder="https://console.groq.com/keys">
+            <button type="button" class="btn eye" data-eye="groq-api-key">view</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Email connections ───────────────────────────────── -->
+    <section class="card">
+      <h2>Email connections</h2>
+
+      <table id="email-table">
+        <thead>
+          <tr><th>Email</th><th>Description</th><th></th></tr>
+        </thead>
+        <tbody id="email-list">
+          <tr><td colspan="3" class="muted">Loading…</td></tr>
+        </tbody>
+      </table>
+
+      <form id="email-form" class="inline-form">
+        <div class="secret-row">
+        <input id="email-addr" type="email" placeholder="you@gmail.com" required>
+      </div>
+      <div class="secret-row">
+        <input id="email-pass" type="password" placeholder="App password" required>
+        <button type="button" class="btn eye" data-eye="email-pass">view</button>
+      </div>
+      <input id="email-desc" type="text" placeholder="Description (e.g. Contacting leads)" required>
+        <button type="submit" class="btn">Add connection</button>
+      </form>
+      <p class="hint">
+        Create an app password at
+        <code>myaccount.google.com/apppasswords</code> and paste it above.
+      </p>
+    </section>
+
+    <!-- ── Preferences ─────────────────────────────────────── -->
+    <section class="card">
+      <h2>Preferences</h2>
+
+      <div class="grid">
+        <div class="field">
+          <label for="home-dir">Home directory (security boundary)</label>
+          <input id="home-dir" type="text">
+        </div>
+        <div class="field">
+          <label for="context-window">Context window (tokens)</label>
+          <input id="context-window" type="number" min="1000" step="1000">
+        </div>
+        <div class="field">
+          <label for="preserve-count">Exchanges preserved on consolidation</label>
+          <input id="preserve-count" type="number" min="0">
+        </div>
+        <div class="field">
+          <label for="max-tools-per-load">Max tools per load_skills</label>
+          <input id="max-tools-per-load" type="number" min="1">
+        </div>
+
+        <div class="field">
+          <label>Token budget (%) —<span id="pct-sum"></span></label>
+          <div class="pct-grid">
+            <label class="pct"><span>Static</span><input id="pct-static" type="number" min="0" step="0.25"></label>
+            <label class="pct"><span>Conversation</span><input id="pct-conversation" type="number" min="0" step="0.25"></label>
+            <label class="pct"><span>Episodic</span><input id="pct-episodic" type="number" min="0" step="0.25"></label>
+            <label class="pct"><span>Output</span><input id="pct-output" type="number" min="0" step="0.25"></label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Git identity</label>
+          <div class="git-grid">
+            <input id="git-user-name" type="text" placeholder="git user name">
+            <input id="git-user-email" type="email" placeholder="git user email">
+          </div>
+        </div>
+      </div>
+
+      <div class="checks">
+        <label class="check"><input id="browser-headless" type="checkbox" class="switch"><span>Headless browser (default)</span></label>
+        <label class="check"><input id="thinking" type="checkbox" class="switch"><span>Thinking (reasoning tokens)</span></label>
+        <label class="check"><input id="stream-thinking" type="checkbox" class="switch"><span>Stream thinking to UI</span></label>
+      </div>
+    </section>
+
+    <!-- ── Finish ──────────────────────────────────────────── -->
+    <section class="card finish">
+      <label class="check big">
+        <input id="setup-complete" type="checkbox" class="switch">
+        <span>Setup complete — don't auto-open this panel again</span>
+      </label>
+      <div class="finish-actions">
+        <button id="save-all-2" class="btn btn-primary">Save changes</button>
+        <button id="save-finish" class="btn btn-ghost">Save &amp; finish setup</button>
+        <button id="migrate" class="btn btn-ghost">Re-run .env migration</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    Served locally by Evy · secrets stay on this machine in <code>utilities/config.json</code>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
